@@ -1,0 +1,29 @@
+{
+  "name": "doorboto2",
+  "version": "1.0.0",
+  "description": "This is a server for an access control system",
+  "main": "doorboto2.js",
+  "scripts": {
+    "test": "nodemon doorboto2.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MancehsterMakerspace/doorboto2.git"
+  },
+  "author": "Manchester Makerspace",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ManchesterMakerspace/doorboto2/issues"
+  },
+  "homepage": "https://github.com/ManchesterMakerspace/doorboto2#readme",
+  "private": true,
+  "dependencies": {
+    "node-persist": "^2.0.10",
+    "serialport": "^4.0.7",
+    "socket.io": "^1.4.6"
+  },
+  "engines": {
+    "node": "4.2.4",
+    "npm": "2.14.12"
+  }
+}
