@@ -70,13 +70,43 @@ var auth = {
             } // else member has already been let in anyhow
         };
     },
+};
 
+
+var update = {
+    ONE_DAY: 86400000,
+    init: function(hourToUpdate){
+        var runTime = getMillis.toTimeTomorrow(hourToUpdate); // gets millis till this hour tomorrow
+        setTimeout(update.cron, runTime);                     // schedual checks daily for warnigs at x hour from here after
+    },
+    cron: function(){                                         // recursively called every day
+        mongo.connectAndDo(update.stream, update.failCase);   // connect to mongo and start an update stream
+        setTimeout(update.cron, update.ONE_DAY);              // make upcomming expiration check every interval
+    },
+    stream: function(){                                       // creates stream of id cards on record to update from
+        var cursor = mongo.card.find({'validity': 'active'}).cursor();
+        cursor.on('data', update.card);
+        // cursor.on('close', update.onClose);
+    },
+    card: function(card){ // process card documents for mongo stream
+        
+    },
+    failCase: function(){
+        console.log('Failed to update local datastore');
+    },
+    millisToHourTomorrow: function(hour){
+        var currentTime = new Date().getTime();         // current millis from epoch
+        var tomorrowAtX = new Date();                   // create date object for tomorrow
+        tomorrowAtX.setDate(tomorrowAtX.getDate() + 1); // point date to tomorrow
+        tomorrowAtX.setHours(hour, 0, 0, 0);            // set hour to send tomorrow
+        return tomorrowAtX.getTime() - currentTime;     // subtract tomo millis from epoch from current millis from epoch
+    },
 };
 
 var mongo = { // depends on: mongoose
     uri: process.env.MONGO_URI,
     ose: require('mongoose'),
-    options: null,                                                       // this is where one would normally put auth info and so on
+    options: null,                                                              // this is where one would normally put auth info and so on
     Schema: mongo.oseSchema,
     member: mongo.ose.model('member', new mongo.Schema({                        // Member collection schema: Read only by doorboto -- Write only by interface
         id: mongo.Schema.ObjectId,                                              // unique id of document
