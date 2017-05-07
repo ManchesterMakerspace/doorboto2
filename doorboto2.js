@@ -1,99 +1,87 @@
 // doorboto2.js ~ Copyright 2017 Manchester Makerspace ~ License MIT
 
-function genericErrorHandler(error, onNoError){
-    if(error){console.error('Im so sorry I had this error:' + error);}
-    else     {onNoError();}
-}
-
 var auth = {
     storage: require('node-persist'),
-    init: function(){                     // kinda a redundant shortcut but maybe there could be more we want to start up
-        return auth.storage.init();       // returns a promise that datastore is ready
-    },
-    updateCreateMember: function(member){ // setItem works like and upsert, this also creates members
-        var consolidatedMemberInfo = {
-            'fullname':       member.fullname,
-            'expirationTime': member.expirationTime
+    updateCard: function(card){ // setItem works like and upsert, this also creates members
+        var cardInfo = {
+            'holder':   card.holder,
+            'expiry':   card.expiry,
+            'validity': card.validity,
         };
-        return auth.storage.setItem(member.cardID, consolidatedMemberInfo);
+        return auth.storage.setItem(card.uid, cardInfo);
     },
-    removeMember: function(member){
-        return auth.storage.removeItem(member.cardID);
-    },
+    removeCard: function(card){return auth.storage.removeItem(card.uid);}, // return promise card was removed
     orize: function(cardID, onSuccess, onFail){
-        var inQuestion = { // default member in question
-            fullname: 'unregistered card',
-            cardID: cardID,
-            expirationTime: 0
+        var scannedCard = { // default member in question
+            uid: cardID,
+            validity: 'unregistered'
         };
-        auth.storage.forEach(function(key, member){
-            if(key === cardID){
-                inQuestion = member;         // hold on to info we have about this member in case we need to check source of truth and fail
-                inQuestion.cardID = cardID;  // add cardID property to check against database
-                if( new Date().getTime() > new Date(member.expirationTime).getTime()){
-                    inQuestion = false;      // member is good to go no check needed
-                    // TODO the issue with this is that if you have a member thats been revoked they are still going to be let in until the proposed cron runs
-                    onSuccess(member.fullname);
-                }
-            }
-        });
-        mongo.connectAndDo(auth.sourceOfTruthCheck(inQuestion, onSuccess, onFail), auth.canNotInfo(inQuestion, onFail));
+        mongo.connectAndDo(
+            auth.mongoCardCheck(scannedCard, onSuccess, onFail), // if we can connect to mongo use db findOne
+            auth.localCheck(scannedCard, onSuccess, onFail)      // otherwise check local back up
+        );
     },
-    sourceOfTruthCheck: function(onHandMember, onSuccess, onFail){
-        return function onConnectToMongo(){
-            mongo.member.findOne({'cardID': onHandMember.cardID}, function onFindMember(error, sourceMember){
-                genericErrorHandler(error, function givenNoError(){ // there are only unexpected results
-                    if(sourceMember){
-                        if(onHandMember.expirationTime){
-                            // member has already been let in if we have their expiration date at this point
-                        } else {
-                            // TODO case for lost and rejected cardIDs
-                            if( new Date().getTime() > new Date(sourceMember.expirationTime).getTime()){ // TODO migration for group members
-                                onSuccess(sourceMember.fullname);
-                            } else { // given member is expired
-                                onFail(sourceMember.fullname + ' has expired');
-                            }
-                        }
-                        updateCreateMember(sourceMember);           // update local data store
-                    } else {
-                        // TODO save rejected card to rejected card collection
-                        onFail('unregistered card');
-                    }
-                });
+    localCheck: function(scannedCard, onSuccess, onFail){
+        return function backupCheck(){
+            var strangerDanger = true;         // not if card is familiar or not
+            auth.storage.forEach(function(key, card){
+                if(key === scannedCard.uid){
+                    strangerDanger = false;    // mark card as now familiar
+                    auth.recordCheck(card, onSuccess, onFail, false);
+                }
+            });
+            if(strangerDanger){                // if card is still unfamiliar after looking for a familiar one
+                onFail('no local copy: ' + scannedCard.uid);
+            }
+        };
+    },
+    mongoCardCheck: function(scannedCard, onSuccess, onFail){ // hold important top level items in closure
+        return function onConnect(){                    // return a callback to execute on connection to mongo
+            mongo.cards.findOne({id: scannedCard.uid}, function onCard(error, card){
+                if(error){
+                    console.log('mongo findOne error: ' + error);
+                    auth.localCheck(scannedCard, onSuccess, onFail)(); // if there is some sort or read error fallback to local data
+                } else if(card){
+                    auth.recordCheck(card, onSuccess, onFail, true);
+                    auth.updateCard(card);                             // keep local redundant data cache up to date
+                } else {
+                    onFail('unregistered card');
+                    mongo.saveTheRejects(scannedCard.uid);
+                }
             });
         };
     },
-    canNotInfo: function(member, onFail){
-        return function canNotConnectToMongo(){
-            if(member){
-                onFail('Could not check db for member: ' + member.fullname);
-            } // else member has already been let in anyhow
-        };
-    },
+    recordCheck: function(card, onSuccess, onFail, mongoConnected){            // checks status of card on record
+        if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
+            if( new Date().getTime() > new Date(card.expiry).getTime()){       // make sure card is not expired
+                onSuccess(card.holder);
+            } else { // given member is expired
+                onFail(card.holder + ' has expired');
+                if(mongoConnected){mongo.saveTheRejects(card);}
+            }
+        } else {
+            onFail(card.holder + "'s " + card.validity + ' card was scanned');
+            if(mongoConnected){mongo.saveTheRejects(card);}
+        }
+    }
 };
 
 
 var update = {
     ONE_DAY: 86400000,
     init: function(hourToUpdate){
-        var runTime = getMillis.toTimeTomorrow(hourToUpdate); // gets millis till this hour tomorrow
-        setTimeout(update.cron, runTime);                     // schedual checks daily for warnigs at x hour from here after
+        var runTime = update.millisToHourTomorrow(hourToUpdate); // gets millis till this hour tomorrow
+        setTimeout(update.cron, runTime);                        // schedual checks daily for warnigs at x hour from here after
     },
-    cron: function(){                                         // recursively called every day
-        mongo.connectAndDo(update.stream, update.failCase);   // connect to mongo and start an update stream
-        setTimeout(update.cron, update.ONE_DAY);              // make upcomming expiration check every interval
+    cron: function(){                                            // recursively called every day
+        mongo.connectAndDo(update.stream, update.failCase);      // connect to mongo and start an update stream
+        setTimeout(update.cron, update.ONE_DAY);                 // make upcomming expiration check every interval
     },
-    stream: function(){                                       // creates stream of id cards on record to update from
-        var cursor = mongo.card.find({'validity': 'active'}).cursor();
-        cursor.on('data', update.card);
-        // cursor.on('close', update.onClose);
+    stream: function(){                                          // creates stream of id cards on record to update from
+        var cursor = mongo.card.find({}).cursor();
+        cursor.on('data', auth.updateCard);
     },
-    card: function(card){ // process card documents for mongo stream
-        
-    },
-    failCase: function(){
-        console.log('Failed to update local datastore');
-    },
+    failCase: function(){console.log('Failed to update local datastore');},
     millisToHourTomorrow: function(hour){
         var currentTime = new Date().getTime();         // current millis from epoch
         var tomorrowAtX = new Date();                   // create date object for tomorrow
@@ -108,37 +96,21 @@ var mongo = { // depends on: mongoose
     ose: require('mongoose'),
     options: null,                                                              // this is where one would normally put auth info and so on
     Schema: mongo.oseSchema,
-    member: mongo.ose.model('member', new mongo.Schema({                        // Member collection schema: Read only by doorboto -- Write only by interface
-        id: mongo.Schema.ObjectId,                                              // unique id of document
-        fullname: {type: String, required: '{PATH} is required', unique: true}, // full name of user
-        cardID: {type: String, required: '{PATH} is required', unique: true},   // user card id                                        TODO deprecate
-        status: {type: String, Required: '{PATH} is required'},                 // type of account, admin, mod, ect                    TODO deprecate
-        accesspoints: [String],                                                 // points of access member (door, machine, ect)        TODO depracate
-        expirationTime: {type: Number},                                         // pre-calculated time of expiration                   TODO depracate
-        groupName: {type: String},                                              // potentially member is in a group/partner membership TODO depracate
-        groupKeystone: {type: Boolean},                                         // notes who holds expiration date for group           TODO depracate
-        groupSize: {type: Number},                                              // notes how many members in group given in one        TODO depracate
-        password: {type: String},                                               // for admin cards only
-        email: {type: String},                                                  // store email of member for prosterity sake
-        slackHandle: {type: String},                                            // store slack username
-        notificationAck: {type: Boolean},                                       // recognizes a notification was sent out
-        expiredAck: {type: Boolean},                                            // recognizes doorboto was updated with expiration
-        cardToken: {type: String, unique: true},                                // TODO add 8 byte QID to write to key cards
-        // pick a random 4 byte number and convert to hex, try to write, try again if not unique
-    })),
     cards: mongo.ose.model('card', new mongo.Schema({                           // Read only by doorboto -- Write only by Interface
         id: mongo.Schema.ObjectId,
-        cardID: {type: String, required: '{PATH} is required', unique: true},   // UID of card, collection find key
-        memberName: {type: String, required: '{PATH} is required'},             // for quickly leaving messages about dated cards without looking up member Maybe not needed
+        uid: {type: String, required: '{PATH} is required', unique: true},      // UID of card, collection find key
+        holder: {type: String, required: '{PATH} is required'},                 // for quickly leaving messages about dated cards without looking up member Maybe not needed
         memberID: {type: String, required: '{PATH} is required'},               // _id of member object fastest way to acurately look up a member
         cardToken: {type: String},                                              // 8 byte QID unique to member, proposing to use in conjunction with UID
-        expirationTime: {type: Number},                                         // expiration of this member
-        validity: {type: String, required: '{PATH} is required'}                // active, expired, revoked, lost, stolen
+        expiry: {type: Number},                                                 // expiration of this member
+        validity: {type: String, required: '{PATH} is required'}                // activeMember, nonMember, expired, revoked, lost, stolen
     })),
     rejections: mongo.ose.model('rejections', new mongo.Schema({                // list of rejected cards, interface can grab last to register new members instead of using socket.io Write only by doorboto
         id: mongo.Schema.ObjectId,
-        cardID: {type: String, required: '{PATH} is required'},
-        timeOf: {type: Date, default: Date.now},
+        uid: {type: String, required: '{PATH} is required'},
+        holder: {type: String},                                                 // if in db note member this could change if card are reused
+        validity: {type: String, required: '{PATH} is required'},               // validity at time of scan, set to unregistered if not in db
+        timeOf: {type: Date, default: Date.now}
     })),
     connectAndDo: function(success, fail){
         mongo.ose.connect(mongo.uri, mongo.options, function onConnect(error){
@@ -146,30 +118,21 @@ var mongo = { // depends on: mongoose
                 console.error('Mongo issue:' + error);
                 fail(error);
             } else {
-                success();
-                mongo.ose.connection.close(); // close connection when we are done
+                success(function onSuccess(){mongo.ose.connection.close();});  // close connection when we are done
             }
         });
+    },
+    saveTheRejects: function(card){
+        var cardToSave = { // make sure we are only saving feilds that are in our schema, though this might be schema's job
+            uid: card.uid,
+            holder: card.holder,
+            validity: card.validity
+        };
+        var rejectDoc = new mongo.rejections(cardToSave);
+        rejectDoc.save(function(error){
+            if(error){console.log('Could not save reject: ' + cardToSave.uid);}
+        });
     }
-    /* init: function(){ // just
-        var Schema = mongo.ose.Schema; var ObjectId = Schema.ObjectId;
-        mongo.member = mongo.ose.model('member', new Schema({                         // create user object property
-            id: ObjectId,                                                             // unique id of document
-            fullname: { type: String, required: '{PATH} is required', unique: true }, // full name of user
-            cardID: { type: String, required: '{PATH} is required', unique: true },   // user card id
-            status: {type: String, Required: '{PATH} is required'},                   // type of account, admin, mod, ect
-            accesspoints: [String],                                                   // points of access member (door, machine, ect)
-            expirationTime: {type: Number},                                           // pre-calculated time of expiration
-            groupName: {type: String},                                                // potentially member is in a group/partner membership
-            groupKeystone: {type: Boolean},                                           // notes who holds expiration date for group
-            groupSize: {type: Number},                                                // notes how many members in group given in one
-            password: {type: String},                                                 // for admin cards only
-            email: {type: String},                                                    // store email of member for prosterity sake
-            slackHandle: {type: String},                                              // store slack username
-            notificationAck: {type: Boolean},                                         // recognizes a notification was sent out
-            expiredAck: {type: Boolean}                                               // recognizes doorboto was updated with expiration
-        }));
-    }, */
 };
 
 var slack = {
@@ -245,6 +208,5 @@ var arduino = {                        // does not need to be connected to and a
 
 // High level start up sequence
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
-// mongo.init(); might be need if you can build properties in right order
 slack.init(process.env.MASTER_SLACKER, process.env.CONNECT_TOKEN);  // set up connection to our slack intergration server
-auth.init(); // <-- returns that things are connected TODO does that matter ?
+auth.storage.init();                                                // TODO return promise that local data store is ready
