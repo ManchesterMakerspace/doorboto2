@@ -36,7 +36,7 @@ var auth = {
         };
     },
     mongoCardCheck: function(scannedCard, onSuccess, onFail){ // hold important top level items in closure
-        return function onConnect(){                    // return a callback to execute on connection to mongo
+        return function onConnect(){                          // return a callback to execute on connection to mongo
             mongo.cards.findOne({id: scannedCard.uid}, function onCard(error, card){
                 if(error){
                     console.log('mongo findOne error: ' + error);
@@ -92,26 +92,28 @@ var update = {
 };
 
 var mongo = { // depends on: mongoose
-    uri: process.env.MONGO_URI,
     ose: require('mongoose'),
-    options: null,                                                              // this is where one would normally put auth info and so on
-    Schema: mongo.oseSchema,
-    cards: mongo.ose.model('card', new mongo.Schema({                           // Read only by doorboto -- Write only by Interface
-        id: mongo.Schema.ObjectId,
-        uid: {type: String, required: '{PATH} is required', unique: true},      // UID of card, collection find key
-        holder: {type: String, required: '{PATH} is required'},                 // for quickly leaving messages about dated cards without looking up member Maybe not needed
-        memberID: {type: String, required: '{PATH} is required'},               // _id of member object fastest way to acurately look up a member
-        cardToken: {type: String},                                              // 8 byte QID unique to member, proposing to use in conjunction with UID
-        expiry: {type: Number},                                                 // expiration of this member
-        validity: {type: String, required: '{PATH} is required'}                // activeMember, nonMember, expired, revoked, lost, stolen
-    })),
-    rejections: mongo.ose.model('rejections', new mongo.Schema({                // list of rejected cards, interface can grab last to register new members instead of using socket.io Write only by doorboto
-        id: mongo.Schema.ObjectId,
-        uid: {type: String, required: '{PATH} is required'},
-        holder: {type: String},                                                 // if in db note member this could change if card are reused
-        validity: {type: String, required: '{PATH} is required'},               // validity at time of scan, set to unregistered if not in db
-        timeOf: {type: Date, default: Date.now}
-    })),
+    options: null,                                                             // this is where one would normally put auth info and so on
+    init: function(mongoUri){
+        mongo.uri = mongoUri;
+        mongo.Schema = mongo.ose.Schema;
+        mongo.cards = mongo.ose.model('card', new mongo.Schema({               // Read only by doorboto -- Write only by Interface
+            id: mongo.Schema.ObjectId,
+            uid: {type: String, required: '{PATH} is required', unique: true}, // UID of card, collection find key
+            holder: {type: String, required: '{PATH} is required'},            // for quickly leaving messages about dated cards without looking up member Maybe not needed
+            memberID: {type: String, required: '{PATH} is required'},          // _id of member object fastest way to acurately look up a member
+            cardToken: {type: String},                                         // 8 byte QID unique to member, proposing to use in conjunction with UID
+            expiry: {type: Number},                                            // expiration of this member
+            validity: {type: String, required: '{PATH} is required'}           // activeMember, nonMember, expired, revoked, lost, stolen
+        }));
+        mongo.rejections = mongo.ose.model('rejections', new mongo.Schema({    // list of rejected cards, interface can grab last to register new members instead of using socket.io Write only by doorboto
+            id: mongo.Schema.ObjectId,
+            uid: {type: String, required: '{PATH} is required'},
+            holder: {type: String},                                            // if in db note member this could change if card are reused
+            validity: {type: String, required: '{PATH} is required'},          // validity at time of scan, set to unregistered if not in db
+            timeOf: {type: Date, default: Date.now}
+        }));
+    },
     connectAndDo: function(success, fail){
         mongo.ose.connect(mongo.uri, mongo.options, function onConnect(error){
             if(error){
@@ -141,11 +143,11 @@ var slack = {
     connected: false,
     init: function(intergrationServer, authToken){
         try {
-            slack.io = slack.io(intergrationServer); // slack https server
+            slack.io = slack.io(intergrationServer);         // slack https server
             slack.firstConnect = true;
         } catch (error){
             console.log('could not connect to ' + intergrationServer + ' cause:' + error);
-            setTimeout(slack.init, 60000); // try again in a minute maybe we are disconnected from the network
+            setTimeout(slack.init, 60000);                   // try again in a minute maybe we are disconnected from the network
         }
         if(slack.firstConnect){
             slack.io.on('connect', function authenticate(){  // connect with masterslacker
@@ -173,12 +175,15 @@ var slack = {
     }
 };
 
-var arduino = {                        // does not need to be connected to and arduino, will try to connect to one though
-    serialLib: require('serialport'),  // yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib
+var arduino = {                          // does not need to be connected to and arduino, will try to connect to one though
+    RETRY_DELAY: 5000,
+    serialport: require('serialport'),   // yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib
     init: function(arduinoPort){
-        arduino.serial = new arduino.serialLib.SerialPort(arduinoPort, {
-            baudrate: 9600,           // remember to set you sketch to go this same speed
-            parser: arduino.serialLib.parsers.readline('\n')
+        console.log(arduinoPort);
+        arduino.serial = new arduino.serialport(arduinoPort, {
+            baudrate: 9600,              // remember to set you sketch to go this same speed
+            parser: arduino.serialport.parsers.readline('\n'),
+            autoOpen: false
         });
         arduino.serial.on('open', arduino.open);
         arduino.serial.on('data', arduino.read);
@@ -191,9 +196,9 @@ var arduino = {                        // does not need to be connected to and a
         var authFunction = auth.orize(arduino.grantAccess, arduino.denyAccess); // create authorization function
         authFunction(id);                                                       // use authorization function
     },
-    close: function(){arduino.init();},              // try to re-establish if serial connection is interupted
-    error: function(error){                          // given something went wrong try to re-establish connection
-        setTimeout(arduino.init, RETRY_DELAY);       // retry every half a minute NOTE this will keep a heroku server awake
+    close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted
+    error: function(error){                             // given something went wrong try to re-establish connection
+        setTimeout(arduino.init, arduino.RETRY_DELAY);  // retry every half a minute NOTE this will keep a heroku server awake
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
@@ -205,8 +210,8 @@ var arduino = {                        // does not need to be connected to and a
     }
 };
 
-
 // High level start up sequence
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
+mongo.init(process.env.MONGO_URI);                                  // set up mongo schemas
 slack.init(process.env.MASTER_SLACKER, process.env.CONNECT_TOKEN);  // set up connection to our slack intergration server
 auth.storage.init();                                                // TODO return promise that local data store is ready
