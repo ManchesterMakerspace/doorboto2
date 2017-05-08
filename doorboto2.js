@@ -67,19 +67,20 @@ var auth = {
 };
 
 
-var update = {
+var cron = {  // runs a time based update opperation
     ONE_DAY: 86400000,
     init: function(hourToUpdate){
-        var runTime = update.millisToHourTomorrow(hourToUpdate); // gets millis till this hour tomorrow
-        setTimeout(update.cron, runTime);                        // schedual checks daily for warnigs at x hour from here after
+        mongo.connectAndDo(cron.stream, cron.failCase);        // run an initial sync up on start
+        var runTime = cron.millisToHourTomorrow(hourToUpdate); // gets millis till this hour tomorrow
+        setTimeout(cron.update, runTime);                      // schedual checks daily for warnigs at x hour from here after
     },
-    cron: function(){                                            // recursively called every day
-        mongo.connectAndDo(update.stream, update.failCase);      // connect to mongo and start an update stream
-        setTimeout(update.cron, update.ONE_DAY);                 // make upcomming expiration check every interval
+    update: function(){                                        // recursively called every day
+        mongo.connectAndDo(cron.stream, cron.failCase);        // connect to mongo and start an update stream
+        setTimeout(cron.update, cron.ONE_DAY);                 // make upcomming expiration check every interval
     },
-    stream: function(){                                          // creates stream of id cards on record to update from
+    stream: function(){                                        // creates stream of id cards on record to update from
         var cursor = mongo.card.find({}).cursor();
-        cursor.on('data', auth.updateCard);
+        cursor.on('data', auth.updateCard);                    // use local persitence update function to sync with source of truth
     },
     failCase: function(){console.log('Failed to update local datastore');},
     millisToHourTomorrow: function(hour){
@@ -213,5 +214,6 @@ var arduino = {                          // does not need to be connected to and
 // High level start up sequence
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
 mongo.init(process.env.MONGO_URI);                                  // set up mongo schemas
+cron.init();                                                        // run a time based stream that updates local cache
 slack.init(process.env.MASTER_SLACKER, process.env.CONNECT_TOKEN);  // set up connection to our slack intergration server
 auth.storage.init();                                                // TODO return promise that local data store is ready
