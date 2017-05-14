@@ -139,8 +139,8 @@ var mongo = { // depends on: mongoose
             // console.log('disconnected from db');
         });
         connection.on('error', function(error){       // prevents doorboto2 from completly eating shit
-            slack.channelMsg('master_slacker', error); // there are no errors only unintended results
-            fail();
+            // slack.channelMsg('master_slacker', error); 
+            fail(error);                              // there are no errors only unintended results
         });
         // TODO error event for fail case?
     }
