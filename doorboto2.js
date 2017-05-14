@@ -11,13 +11,13 @@ var cache = {                          // local cache logic for power or databas
         cache.persist.setItem(card.uid, cardInfo); // setItem works like and upsert, this also creates cards
     },
     removeCard: function(card){cache.persist.removeItem(card.uid);}, // right know we are storing everything
-    check: function(scannedCard, onSuccess, onFail){
-        return function backupCheck(){
+    check: function(cardID, onSuccess, onFail){
+        return function cacheCheck(){
             var strangerDanger = true;                               // not if card is familiar or not
             cache.persist.forEach(function(key, card){
-                if(key === scannedCard.uid){
+                if(key === cardID){
                     strangerDanger = false;                          // mark card as now familiar
-                    auth.recordCheck(card, onSuccess, onFail, false);
+                    auth.checkRejection(card, onSuccess, onFail);
                 }
             }); // if card is still unfamiliar after looking for a familiar one
             if(strangerDanger){onFail('no local copy: ' + scannedCard.uid);}
@@ -27,45 +27,50 @@ var cache = {                          // local cache logic for power or databas
 
 var auth = {
     orize: function(cardID, onSuccess, onFail){
-        var scannedCard = { // default member in question
-            uid: cardID,
-            validity: 'unregistered'
-        };
         mongo.connectAndDo(
-            'cards',                                             // return cards collection model
-            auth.mongoCardCheck(scannedCard, onSuccess, onFail), // if we can connect to mongo use db findOne
-            cache.check(scannedCard, onSuccess, onFail)          // otherwise check local back up
+            auth.mongoCardCheck(cardID, onSuccess, onFail), // if we can connect to mongo use db findOne
+            cache.check(cardID, onSuccess, onFail)          // otherwise check local back up
         );
     },
-    mongoCardCheck: function(scannedCard, onSuccess, onFail){ // hold important top level items in closure
+    mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
         return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
-            dbModel.findOne({uid: scannedCard.uid}, function onCard(error, card){
+            dbModel.cards.findOne({uid: cardID}, function onCard(error, card){
                 if(error){
-                    console.log('mongo findOne error: ' + error);
-                    cache.check(scannedCard, onSuccess, onFail)();     // if there is some sort or read error fallback to local data
-                } else if(card){
-                    auth.recordCheck(card, onSuccess, onFail, true);
-                    cache.updateCard()(card);                           // keep local redundant data cache up to date
-                } else {
-                    onFail('unregistered card');
-                    mongo.saveTheRejects(scannedCard.uid); // TODO fix
+                    close();                                           // close connection lets move on
+                    console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
+                    cache.check(cardID, onSuccess, onFail)();          // if there is some sort or read error fallback to local data
+                } else if(card){                                       // given we got a record back from mongo
+                    if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
+                        auth.reject(card, dbModel.rejections, close);  // Rejections: we have to wait till saved to close db
+                    } else { close(); }                                // close connection to db regardless
+                    cache.updateCard(card);                            // keep local redundant data cache up to date
+                } else {                                               // no error, no card, this card is unregistered
+                    onFail('unregistered card');                       // we want these to show up somewhere to register new cards
+                    auth.reject({uid: cardID}, dbModel.rejections, close); // so lets put them in mongo
                 }
             });
-            onFinish();
         };
     },
-    recordCheck: function(card, onSuccess, onFail, mongoConnected){            // checks status of card on record
+    checkRejection: function(card, onSuccess, onFail){                         // When we have an actual record to check
+        var rejected = true;                                                   // returns if card was reject if caller cares
         if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
             if( new Date().getTime() > new Date(card.expiry).getTime()){       // make sure card is not expired
-                onSuccess(card.holder);
-            } else { // given member is expired
-                onFail(card.holder + ' has expired');
-                if(mongoConnected){mongo.saveTheRejects(card);}
-            }
-        } else {
-            onFail(card.holder + "'s " + card.validity + ' card was scanned');
-            if(mongoConnected){mongo.saveTheRejects(card);}
-        }
+                onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
+                rejected = false;                                              // congrats you're not rejected
+            } else {onFail(card.holder + ' has expired');}                     // given members time is up we want a polite message
+        } else {onFail(card.holder + "'s " + card.validity + ' card was scanned');} // context around rejections is helpful
+        return rejected;                                                       // would rather leave calling fuction to decide what to do
+    },
+    reject: function(card, rejectionModel, close){
+        var rejectedCard = new rejectionModel({                      // validates data with mongoose to be updated in mongo
+            uid: card.uid,                                           // should always have uid
+            holder: card.holder ? card.holder : null,                // we only get this when a recorded card holder is rejected
+            validity: card.validity ? card.validity : 'unregistered' // important to know this is an unregistered card if info missing
+        });
+        rejectedCard.save(function(error){                                            // save is the himalayan word for update
+            if(error){console.log(error + ': Could not save reject -> ' + card.uid);} // knowing who it was might be important
+            close(); // error or not close connection to db after saving a rejection
+        });
     }
 };
 
@@ -73,7 +78,7 @@ var auth = {
 var cron = {  // runs a time based update opperation
     ONE_DAY: 86400000,
     init: function(hourToUpdate){
-        mongo.connectAndDo('cards', cron.stream, cron.failCase); // run an initial sync up on start
+        mongo.connectAndDo(cron.stream, cron.failCase);          // run an initial sync up on start
         var runTime = cron.millisToHourTomorrow(hourToUpdate);   // gets millis till this hour tomorrow
         setTimeout(cron.update, runTime);                        // schedual checks daily for warnigs at x hour from here after
     },
@@ -82,11 +87,11 @@ var cron = {  // runs a time based update opperation
         setTimeout(cron.update, cron.ONE_DAY);                   // make upcomming expiration check every interval
     },
     stream: function(dbModel, close){                            // Passed dbModel and close event to call when done
-        var cursor = dbModel.find({}).cursor();                  // grab cursor to parse through all cards
+        var cursor = dbModel.cards.find({}).cursor();            // grab cursor to parse through all cards
         cursor.on('data', cache.updateCard);                     // local persitence update function to sync w/ source of truth
         cursor.on('close', close);
     },
-    failCase: function(error){console.log('Failed to update local datastore: ' + error);},
+    failCase: function(error){slack.channelMsg('master_slacker','Failed to update local datastore: ' + error);},
     millisToHourTomorrow: function(hour){
         var currentTime = new Date().getTime();         // current millis from epoch
         var tomorrowAtX = new Date();                   // create date object for tomorrow
@@ -119,28 +124,25 @@ var mongo = { // depends on: mongoose
             timeOf: {type: Date, default: Date.now}
         });
     },
-    connectAndDo: function(collection, success, fail){
+    connectAndDo: function(success, fail){
         var connection = mongo.ose.createConnection(mongo.uri);
-        var dbModel = connection.model(collection, mongo[collection]());
+        var dbModel = {}; // object of models to pass on
+        dbModel.cards = connection.model('cards', mongo.cards());
+        dbModel.rejections = connection.model('rejections', mongo.rejections());
+
         connection.on('connected', function(){
             success(dbModel, function close(){
                 connection.close();
             });
         });
         connection.on('disconnected', function(){
-            console.log('disconnected from db');
+            // console.log('disconnected from db');
         });
-    },
-    saveTheRejects: function(card){  // TODO will not work in current situation
-        var cardToSave = { // make sure we are only saving feilds that are in our schema, though this might be schema's job
-            uid: card.uid,
-            holder: card.holder,
-            validity: card.validity
-        };
-        var rejectDoc = new mongo.rejections(cardToSave);
-        rejectDoc.save(function(error){
-            if(error){console.log('Could not save reject: ' + cardToSave.uid);}
+        connection.on('error', function(error){       // prevents doorboto2 from completly eating shit
+            slack.channelMsg('master_slacker', error); // there are no errors only unintended results
+            fail();
         });
+        // TODO error event for fail case?
     }
 };
 
@@ -176,13 +178,14 @@ var slack = {
         if(slack.connected){ slack.io.emit('msg', msg);
         } else { console.log('404:'+msg); }
     },
-    pm: function(handle, msg){
-        if(slack.connected){ slack.io.emit('pm', {userhandle: handle, msg: msg});
-        } else { console.log('404:'+msg);}
+    channelMsg: function(channel, msg){
+        console.log('slack connected =' + slack.connected);
+        if(slack.connected){ slack.io.emit('channelMsg', {userhandle: channel, msg: msg});
+        } else { console.log('err:' + msg);}
     }
 };
 
-var arduino = {                          // does not need to be connected to and arduino, will try to connect to one though
+var arduino = {                          // does not need to be connected to an arduino, will try to connect to one though
     RETRY_DELAY: 5000,
     serialport: require('serialport'),   // yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib
     init: function(arduinoPort){
@@ -208,7 +211,7 @@ var arduino = {                          // does not need to be connected to and
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
         slack.send(memberName + ' just checked in'); // let members know through slack // TODO need a send to authrized services method
-    },
+    },                                               // TODO like Kevin's cameras
     denyAccess: function(msg){                       // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
         slack.send('denied access: ' + msg);         // let members know through slack
