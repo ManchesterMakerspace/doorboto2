@@ -11,13 +11,13 @@ var cache = {                          // local cache logic for power or databas
         cache.persist.setItem(card.uid, cardInfo); // setItem works like and upsert, this also creates cards
     },
     removeCard: function(card){cache.persist.removeItem(card.uid);}, // right know we are storing everything
-    check: function(cardID, onSuccess, onFail){
-        return function cacheCheck(){
+    check: function(cardID, onSuccess, onFail){                      // hold cardID and callbacks in closure
+        return function cacheCheck(){                                // returns callback to occur on failed db connection
             var strangerDanger = true;                               // not if card is familiar or not
             cache.persist.forEach(function(key, card){
                 if(key === cardID){
                     strangerDanger = false;                          // mark card as now familiar
-                    auth.checkRejection(card, onSuccess, onFail);
+                    auth.checkRejection(card, onSuccess, onFail);    // check if this card is valid or not
                 }
             }); // if card is still unfamiliar after looking for a familiar one
             if(strangerDanger){onFail('no local copy: ' + scannedCard.uid);}
@@ -139,7 +139,7 @@ var mongo = { // depends on: mongoose
             // console.log('disconnected from db');
         });
         connection.on('error', function(error){       // prevents doorboto2 from completly eating shit
-            // slack.channelMsg('master_slacker', error); 
+            // slack.channelMsg('master_slacker', error);
             fail(error);                              // there are no errors only unintended results
         });
         // TODO error event for fail case?
@@ -147,32 +147,23 @@ var mongo = { // depends on: mongoose
 };
 
 var slack = {
-    io: require('socket.io-client'),                         // to connect to our slack intergration server
-    firstConnect: false,
-    connected: false,
+    io: require('socket.io-client'),                           // to connect to our slack intergration server
+    connected: false,                                          // tell us whether to log or send to slack
     init: function(intergrationServer, authToken){
-        try {
-            slack.io = slack.io(intergrationServer);         // slack https server
-            slack.firstConnect = true;
-        } catch (error){
-            console.log('could not connect to ' + intergrationServer + ' cause:' + error);
-            setTimeout(slack.init, 60000);                   // try again in a minute maybe we are disconnected from the network
-        }
-        if(slack.firstConnect){
-            slack.io.on('connect', function authenticate(){  // connect with masterslacker
-                slack.io.emit('authenticate', {
-                    token: authToken,
-                    slack: {
-                        username: 'Doorboto2',
-                        // channel: 'whos_at_the_space', // TODO COMMENT THIS IN WHEN YOU DEPLOY IDIOT
-                        channel: 'test_channel',
-                        iconEmoji: ':robot_face:'
-                    }
-                }); // its important lisner know that we are for real
-                slack.connected = true;
-            });
-            slack.io.on('disconnect', function disconnected(){slack.connected = false;});
-        }
+        slack.socketio = slack.io(intergrationServer);
+        slack.socketio.on('connect', function authenticate(){  // connect with masterslacker
+            slack.socketio.emit('authenticate', {
+                token: authToken,
+                slack: {
+                    username: 'Doorboto2',
+                    // channel: 'whos_at_the_space', // TODO COMMENT THIS IN WHEN YOU DEPLOY IDIOT
+                    channel: 'test_channel',
+                    iconEmoji: ':robot_face:'
+                }
+            }); // its important lisner know that we are for real
+            slack.connected = true;
+        });
+        slack.socketio.on('disconnect', function disconnected(){slack.connected = false;});
     },
     send: function(msg){
         if(slack.connected){ slack.io.emit('msg', msg);
@@ -180,7 +171,7 @@ var slack = {
     },
     channelMsg: function(channel, msg){
         console.log('slack connected =' + slack.connected);
-        if(slack.connected){ slack.io.emit('channelMsg', {userhandle: channel, msg: msg});
+        if(slack.connected){ slack.socketio.emit('channelMsg', {userhandle: channel, msg: msg});
         } else { console.log('err:' + msg);}
     }
 };
