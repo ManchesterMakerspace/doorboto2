@@ -6,8 +6,11 @@ To run the server, environment variables are needed!
 Here is a small shell script that sets up said variables
 
     #!/bin/bash
-    # script for starting our
-    # State whether testing application or not
+    # script for starting doorboto2
+    export CONNECT_TOKEN=<Tokenthatconnectsyoutmasterslacker> # not the real token
+    export MASTER_SLACKER="https://masterslacker.herokuapp.com"
+    export ARDUINO_PORT=</dev/ttyATH0> # This is what is for the yun, different in other OSes
+    export MONGO_URI="mongodb://<ip_of_your_server>/<db_name>"
     node doorboto2.js
 
 
