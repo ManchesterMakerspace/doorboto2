@@ -34,17 +34,20 @@ var auth = {
     },
     mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
         return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
-            dbModel.cards.findOne({uid: cardID}, function onCard(error, card){
+            console.log('looking for cardID: ' + cardID);
+            dbModel.cards.findOne({'uid': cardID}, function onCard(error, card){
                 if(error){
                     close();                                           // close connection lets move on
                     console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
                     cache.check(cardID, onSuccess, onFail)();          // if there is some sort or read error fallback to local data
                 } else if(card){                                       // given we got a record back from mongo
+                    // card = card[0];                                    // should be unique but if not give us first result
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
                         auth.reject(card, dbModel.rejections, close);  // Rejections: we have to wait till saved to close db
                     } else { close(); }                                // close connection to db regardless
                     cache.updateCard(card);                            // keep local redundant data cache up to date
                 } else {                                               // no error, no card, this card is unregistered
+                    console.log('did not findOne');
                     onFail('unregistered card');                       // we want these to show up somewhere to register new cards
                     auth.reject({uid: cardID}, dbModel.rejections, close); // so lets put them in mongo
                 }
@@ -53,8 +56,10 @@ var auth = {
     },
     checkRejection: function(card, onSuccess, onFail){                         // When we have an actual record to check
         var rejected = true;                                                   // returns if card was reject if caller cares
+        console.log('checking if we should reject this card');
+        console.log(JSON.stringify(card, null, 4));
         if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
-            if( new Date().getTime() > new Date(card.expiry).getTime()){       // make sure card is not expired
+            if( new Date().getTime() < new Date(card.expiry).getTime()){       // make sure card is not expired
                 onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
                 rejected = false;                                              // congrats you're not rejected
             } else {onFail(card.holder + ' has expired');}                     // given members time is up we want a polite message
@@ -129,7 +134,6 @@ var mongo = { // depends on: mongoose
         var dbModel = {}; // object of models to pass on
         dbModel.cards = connection.model('cards', mongo.cards());
         dbModel.rejections = connection.model('rejections', mongo.rejections());
-
         connection.on('connected', function(){
             success(dbModel, function close(){
                 connection.close();
@@ -152,6 +156,7 @@ var slack = {
     init: function(intergrationServer, authToken){
         slack.socketio = slack.io(intergrationServer);
         slack.socketio.on('connect', function authenticate(){  // connect with masterslacker
+            console.log('connected to masterslacker');
             slack.socketio.emit('authenticate', {
                 token: authToken,
                 slack: {
@@ -166,7 +171,7 @@ var slack = {
         slack.socketio.on('disconnect', function disconnected(){slack.connected = false;});
     },
     send: function(msg){
-        if(slack.connected){ slack.io.emit('msg', msg);
+        if(slack.connected){ slack.socketio.emit('msg', msg);
         } else { console.log('404:'+msg); }
     },
     channelMsg: function(channel, msg){
@@ -185,17 +190,17 @@ var arduino = {                          // does not need to be connected to an 
             parser: arduino.serialport.parsers.readline('\n'),
             autoOpen: false
         });
-        arduino.serial.on('open', arduino.open);
+        arduino.serial.on('open', function(){arduino.open(arduinoPort);});
         arduino.serial.on('data', arduino.read);
         arduino.serial.on('close', arduino.close);
         arduino.serial.on('error', arduino.error);
     },
-    open: function(){console.log('connected to something');},    // what to do when serial connection opens up with arduino
+    open: function(port){console.log('connected to: ' + port);}, // what to do when serial connection opens up with arduino
     read: function(data){                                        // getting data from Arduino, only expect a card ID
         var id = data.slice(0, data.length-1);                   // exclude newline char from card ID
         auth.orize(id, arduino.grantAccess, arduino.denyAccess); // check if this card has access
     },
-    close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted
+    close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted TODO does this make sense?
     error: function(error){                             // given something went wrong try to re-establish connection
         setTimeout(arduino.init, arduino.RETRY_DELAY);  // retry every half a minute NOTE this will keep a heroku server awake
     },
