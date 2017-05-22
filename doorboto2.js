@@ -34,7 +34,7 @@ var auth = {
     },
     mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
         return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
-            console.log('looking for cardID: ' + cardID);
+            // console.log('looking for cardID: ' + cardID + ' that is ' + cardID.length + ' long'); // used this to find whitespace issue
             dbModel.cards.findOne({'uid': cardID}, function onCard(error, card){
                 if(error){
                     close();                                           // close connection lets move on
@@ -47,7 +47,6 @@ var auth = {
                     } else { close(); }                                // close connection to db regardless
                     cache.updateCard(card);                            // keep local redundant data cache up to date
                 } else {                                               // no error, no card, this card is unregistered
-                    console.log('did not findOne');
                     onFail('unregistered card');                       // we want these to show up somewhere to register new cards
                     auth.reject({uid: cardID}, dbModel.rejections, close); // so lets put them in mongo
                 }
@@ -56,8 +55,6 @@ var auth = {
     },
     checkRejection: function(card, onSuccess, onFail){                         // When we have an actual record to check
         var rejected = true;                                                   // returns if card was reject if caller cares
-        console.log('checking if we should reject this card');
-        console.log(JSON.stringify(card, null, 4));
         if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
             if( new Date().getTime() < new Date(card.expiry).getTime()){       // make sure card is not expired
                 onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
@@ -196,8 +193,8 @@ var arduino = {                          // does not need to be connected to an 
         arduino.serial.on('error', arduino.error);
     },
     open: function(port){console.log('connected to: ' + port);}, // what to do when serial connection opens up with arduino
-    read: function(data){                                        // getting data from Arduino, only expect a card ID
-        var id = data.slice(0, data.length-1);                   // exclude newline char from card ID
+    read: function(data){                                        // getting data from Arduino, only expect a card
+        var id = data.replace(/[^\x2F-\x7F]/g, '');              // remove everything except 0x27 through 0x7F on the ASCII table
         auth.orize(id, arduino.grantAccess, arduino.denyAccess); // check if this card has access
     },
     close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted TODO does this make sense?
