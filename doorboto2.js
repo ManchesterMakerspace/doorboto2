@@ -20,7 +20,7 @@ var cache = {                          // local cache logic for power or databas
                     auth.checkRejection(card, onSuccess, onFail);    // check if this card is valid or not
                 }
             }); // if card is still unfamiliar after looking for a familiar one
-            if(strangerDanger){onFail('no local copy: ' + scannedCard.uid);}
+            if(strangerDanger){onFail('no local copy: ' + cardID);}
         };
     }
 };
@@ -172,7 +172,6 @@ var slack = {
         } else { console.log('404:'+msg); }
     },
     channelMsg: function(channel, msg){
-        console.log('slack connected =' + slack.connected);
         if(slack.connected){ slack.socketio.emit('channelMsg', {userhandle: channel, msg: msg});
         } else { console.log('err:' + msg);}
     }
@@ -194,7 +193,7 @@ var arduino = {                          // does not need to be connected to an 
     },
     open: function(port){console.log('connected to: ' + port);}, // what to do when serial connection opens up with arduino
     read: function(data){                                        // getting data from Arduino, only expect a card
-        var id = data.replace(/[^\x2F-\x7F]/g, '');              // remove everything except 0x27 through 0x7F on the ASCII table
+        var id = data.replace(/[^\x2F-\x7F]/g, '');              // remove everything except 0x2F through 0x7F on the ASCII table
         auth.orize(id, arduino.grantAccess, arduino.denyAccess); // check if this card has access
     },
     close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted TODO does this make sense?
