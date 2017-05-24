@@ -20,7 +20,10 @@ var cache = {                          // local cache logic for power or databas
                     auth.checkRejection(card, onSuccess, onFail);    // check if this card is valid or not
                 }
             }); // if card is still unfamiliar after looking for a familiar one
-            if(strangerDanger){onFail('no local copy: ' + cardID);}
+            if(strangerDanger){
+                onFail(' not found in cache, db is down');
+                console.log('unregistered in local cache: ' + cardID); // Write this cardID to the logs for future referance
+            }
         };
     }
 };
@@ -205,6 +208,7 @@ var arduino = {                          // does not need to be connected to an 
 };
 
 // High level start up sequence
+mongo.ose.Promise = Promise;                                        // way to get rid of shitty deprication message about unused library
 cache.persist.init();                                               // set up local cache
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
 cron.init(3);                                                       // run a time based stream that updates local cache
