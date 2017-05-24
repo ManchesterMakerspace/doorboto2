@@ -10,7 +10,7 @@ var cache = {                          // local cache logic for power or databas
         };
         cache.persist.setItem(card.uid, cardInfo); // setItem works like and upsert, this also creates cards
     },
-    removeCard: function(card){cache.persist.removeItem(card.uid);}, // right know we are storing everything
+    removeCard: function(card){cache.persist.removeItem(card.uid);}, // NOT USING this just so you know how
     check: function(cardID, onSuccess, onFail){                      // hold cardID and callbacks in closure
         return function cacheCheck(){                                // returns callback to occur on failed db connection
             var strangerDanger = true;                               // not if card is familiar or not
@@ -34,14 +34,12 @@ var auth = {
     },
     mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
         return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
-            // console.log('looking for cardID: ' + cardID + ' that is ' + cardID.length + ' long'); // used this to find whitespace issue
             dbModel.cards.findOne({'uid': cardID}, function onCard(error, card){
                 if(error){
                     close();                                           // close connection lets move on
                     console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
                     cache.check(cardID, onSuccess, onFail)();          // if there is some sort or read error fallback to local data
                 } else if(card){                                       // given we got a record back from mongo
-                    // card = card[0];                                    // should be unique but if not give us first result
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
                         auth.reject(card, dbModel.rejections, close);  // Rejections: we have to wait till saved to close db
                     } else { close(); }                                // close connection to db regardless
@@ -132,18 +130,15 @@ var mongo = { // depends on: mongoose
         dbModel.cards = connection.model('cards', mongo.cards());
         dbModel.rejections = connection.model('rejections', mongo.rejections());
         connection.on('connected', function(){
-            success(dbModel, function close(){
-                connection.close();
-            });
+            success(dbModel, function close(){connection.close();});
         });
-        connection.on('disconnected', function(){
-            // console.log('disconnected from db');
+        connection.on('open', function(){
+            // could do somethings here maybe?
         });
+        connection.on('disconnected', function(){console.log('disconnected from db');});
         connection.on('error', function(error){       // prevents doorboto2 from completly eating shit
-            // slack.channelMsg('master_slacker', error);
             fail(error);                              // there are no errors only unintended results
         });
-        // TODO error event for fail case?
     }
 };
 
