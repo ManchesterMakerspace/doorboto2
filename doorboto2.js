@@ -148,7 +148,6 @@ var slack = {
     init: function(intergrationServer, authToken){
         slack.socketio = slack.io(intergrationServer);
         slack.socketio.on('connect', function authenticate(){  // connect with masterslacker
-            console.log('connected to masterslacker');
             slack.socketio.emit('authenticate', {
                 token: authToken,
                 slack: {
