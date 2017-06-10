@@ -155,8 +155,7 @@ var slack = {
                 token: authToken,
                 slack: {
                     username: 'Doorboto2',
-                    // channel: 'whos_at_the_space', // TODO COMMENT THIS IN WHEN YOU DEPLOY IDIOT
-                    channel: 'test_channel',
+                    channel: process.env.CHANNEL,
                     iconEmoji: ':robot_face:'
                 }
             }); // its important lisner know that we are for real

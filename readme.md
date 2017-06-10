@@ -11,6 +11,7 @@ Here is a small shell script that sets up said variables
     export MASTER_SLACKER="https://masterslacker.herokuapp.com"
     export ARDUINO_PORT=</dev/ttyATH0> # This is what is for the yun, different in other OSes
     export MONGO_URI="mongodb://<ip_of_your_server>/<db_name>"
+    export CHANNEL=<intended channel to post to>
     node doorboto2.js
 
 
