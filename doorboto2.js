@@ -94,7 +94,7 @@ var cron = {  // runs a time based update opperation
         cursor.on('data', cache.updateCard);                     // local persitence update function to sync w/ source of truth
         cursor.on('close', close);
     },
-    failCase: function(error){slack.channelMsg('master_slacker','Failed to update local datastore: ' + error);},
+    failCase: function(error){slack.channelMsg('master_slacker','On Update: ' + error);},
     millisToHourTomorrow: function(hour){
         var currentTime = new Date().getTime();         // current millis from epoch
         var tomorrowAtX = new Date();                   // create date object for tomorrow
@@ -168,7 +168,7 @@ var slack = {
         } else { console.log('404:'+msg); }
     },
     channelMsg: function(channel, msg){
-        if(slack.connected){ slack.socketio.emit('channelMsg', {userhandle: channel, msg: msg});
+        if(slack.connected){ slack.socketio.emit('channelMsg', {channel: channel, msg: msg});
         } else { console.log('err:' + msg);}
     }
 };
