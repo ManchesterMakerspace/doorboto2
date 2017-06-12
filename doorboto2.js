@@ -112,7 +112,7 @@ var mongo = { // depends on: mongoose
             id: mongo.ose.Schema.ObjectId,
             uid: {type: String, required: '{PATH} is required', unique: true}, // UID of card, collection find key
             holder: {type: String, required: '{PATH} is required'},            // leave messages about dated cards without looking up member
-            memberID: {type: String, required: '{PATH} is required'},          // _id of member object, fastest way to look up a member
+            member_id: {type: String},                                         // _id of member object, fastest way to look up a member
             cardToken: {type: String},                                         // 8 byte QID unique to member, proposing to use w/ UID
             expiry: {type: Number},                                            // expiration of this member
             validity: {type: String, required: '{PATH} is required'}           // activeMember, nonMember, expired, revoked, lost, stolen
