@@ -1,5 +1,4 @@
 // doorboto2.js ~ Copyright 2017 Manchester Makerspace ~ License MIT
-
 var cache = {                          // local cache logic for power or database failure events
     persist: require('node-persist'),  // methods for storing JSON objects in local files
     updateCard: function(card){        // processes cards
@@ -20,20 +19,22 @@ var cache = {                          // local cache logic for power or databas
                     auth.checkRejection(card, onSuccess, onFail);    // check if this card is valid or not
                 }
             }); // if card is still unfamiliar after looking for a familiar one
-            if(strangerDanger){
-                onFail(' not found in cache, db is down');
-                console.log('unregistered in local cache: ' + cardID); // Write this cardID to the logs for future referance
-            }
+            if(strangerDanger){onFail();}
         };
     }
 };
 
 var auth = {
     orize: function(cardID, onSuccess, onFail){
-        mongo.connectAndDo(
-            auth.mongoCardCheck(cardID, onSuccess, onFail), // if we can connect to mongo use db findOne
-            cache.check(cardID, onSuccess, onFail)          // otherwise check local back up
-        );
+        cache.check(cardID, onSuccess, function notInLocal(){
+            mongo.connectAndDo(
+                auth.mongoCardCheck(cardID, onSuccess, onFail), // if we can connect to mongo use db findOne
+                function failedToConnectToDB(){                 // not in local cache could not connect to db
+                    console.log(cardID + ' rejected: not in cache or failed to connect to db');
+                    onFail();                                   // sorry amnesia
+                }
+            );
+        })(); // cache.check returns a function, and that needs to be executed()
     },
     mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
         return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
@@ -79,29 +80,17 @@ var auth = {
 
 
 var cron = {  // runs a time based update opperation
-    ONE_DAY: 86400000,
-    init: function(hourToUpdate){
-        mongo.connectAndDo(cron.stream, cron.failCase);          // run an initial sync up on start
-        var runTime = cron.millisToHourTomorrow(hourToUpdate);   // gets millis till this hour tomorrow
-        setTimeout(cron.update, runTime);                        // schedual checks daily for warnigs at x hour from here after
-    },
+    FREQUENCY: 3600000,                                          // every hour update cache (in milliseconds)
     update: function(){                                          // recursively called every day
         mongo.connectAndDo(cron.stream, cron.failCase);          // connect to mongo and start an update stream
-        setTimeout(cron.update, cron.ONE_DAY);                   // make upcomming expiration check every interval
+        setTimeout(cron.update, cron.FREQUENCY);                 // make upcomming expiration check every interval
     },
     stream: function(dbModel, close){                            // Passed dbModel and close event to call when done
         var cursor = dbModel.cards.find({}).cursor();            // grab cursor to parse through all cards
         cursor.on('data', cache.updateCard);                     // local persitence update function to sync w/ source of truth
         cursor.on('close', close);
     },
-    failCase: function(error){slack.channelMsg('master_slacker','On Update: ' + error);},
-    millisToHourTomorrow: function(hour){
-        var currentTime = new Date().getTime();         // current millis from epoch
-        var tomorrowAtX = new Date();                   // create date object for tomorrow
-        tomorrowAtX.setDate(tomorrowAtX.getDate() + 1); // point date to tomorrow
-        tomorrowAtX.setHours(hour, 0, 0, 0);            // set hour to send tomorrow
-        return tomorrowAtX.getTime() - currentTime;     // subtract tomo millis from epoch from current millis from epoch
-    },
+    failCase: function(error){slack.channelMsg('master_slacker','On Update: ' + error);}
 };
 
 var mongo = { // depends on: mongoose
@@ -207,8 +196,8 @@ var arduino = {                          // does not need to be connected to an 
 };
 
 // High level start up sequence
-// mongo.ose.Promise = Promise; // Silences shitty message about deprecated internal promise library, would work if not node v10.33 on yun
+mongo.ose.Promise = Promise; // Silences shitty message about deprecated internal promise library, would work if not node v10.33 on yun
 cache.persist.init();                                               // set up local cache
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
-cron.init(3);                                                       // run a time based stream that updates local cache
+cron.update();                                                      // run a time based stream that updates local cache
 slack.init(process.env.MASTER_SLACKER, process.env.CONNECT_TOKEN);  // set up connection to our slack intergration server
