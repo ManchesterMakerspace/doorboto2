@@ -37,20 +37,20 @@ var auth = {
         })(); // cache.check returns a function, and that needs to be executed()
     },
     mongoCardCheck: function(cardID, onSuccess, onFail){      // hold important top level items in closure
-        return function onConnect(dbModel, close){            // return a callback to execute on connection to mongo
-            dbModel.cards.findOne({'uid': cardID}, function onCard(error, card){
+        return function onConnect(db){            // return a callback to execute on connection to mongo
+            db.collection('cards').findOne({'uid': cardID}, function onCard(error, card){
                 if(error){
-                    close();                                           // close connection lets move on
+                    db.close();                                        // close connection lets move on
                     console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
                     cache.check(cardID, onSuccess, onFail)();          // if there is some sort or read error fallback to local data
                 } else if(card){                                       // given we got a record back from mongo
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
-                        auth.reject(card, dbModel.rejections, close);  // Rejections: we have to wait till saved to close db
-                    } else { close(); }                                // close connection to db regardless
+                        auth.reject(card, db);                         // Rejections: we have to wait till saved to close db
+                    } else { db.close(); }                             // close connection to db regardless
                     cache.updateCard(card);                            // keep local redundant data cache up to date
                 } else {                                               // no error, no card, this card is unregistered
                     onFail('unregistered card');                       // we want these to show up somewhere to register new cards
-                    auth.reject({uid: cardID}, dbModel.rejections, close); // so lets put them in mongo
+                    auth.reject({uid: cardID}, db);                    // so lets put them in mongo
                 }
             });
         };
@@ -65,19 +65,19 @@ var auth = {
         } else {onFail(card.holder + "'s " + card.validity + ' card was scanned');} // context around rejections is helpful
         return rejected;                                                       // would rather leave calling fuction to decide what to do
     },
-    reject: function(card, rejectionModel, close){
-        var rejectedCard = new rejectionModel({                      // validates data with mongoose to be updated in mongo
+    reject: function(card, db){
+        db.collection('rejections').insertOne({
+            _id: new mongo.ObjectId(),                               // do this so database doesn't need to
             uid: card.uid,                                           // should always have uid
             holder: card.holder ? card.holder : null,                // we only get this when a recorded card holder is rejected
-            validity: card.validity ? card.validity : 'unregistered' // important to know this is an unregistered card if info missing
-        });
-        rejectedCard.save(function(error){                                            // save is the himalayan word for update
+            validity: card.validity ? card.validity : 'unregistered',// important to know this is an unregistered card if info missing
+            timeOf: new Date().getTime(),                            // TODO make sure this formating is correct
+        }, function(error, data){
             if(error){console.log(error + ': Could not save reject -> ' + card.uid);} // knowing who it was might be important
-            close(); // error or not close connection to db after saving a rejection
+            db.close(); // error or not close connection to db after saving a rejection
         });
     }
 };
-
 
 var cron = {  // runs a time based update opperation
     FREQUENCY: 3600000,                                          // every hour update cache (in milliseconds)
@@ -85,51 +85,34 @@ var cron = {  // runs a time based update opperation
         mongo.connectAndDo(cron.stream, cron.failCase);          // connect to mongo and start an update stream
         setTimeout(cron.update, cron.FREQUENCY);                 // make upcomming expiration check every interval
     },
-    stream: function(dbModel, close){                            // Passed dbModel and close event to call when done
-        var cursor = dbModel.cards.find({}).cursor();            // grab cursor to parse through all cards
-        cursor.on('data', cache.updateCard);                     // local persitence update function to sync w/ source of truth
-        cursor.on('close', close);
+    start: function(db){
+        var cursor = db.collection('cards').find({});            // grab cursor to parse through all cards
+        cron.stream(cursor, db);
     },
-    failCase: function(error){slack.channelMsg('master_slacker','On Update: ' + error);}
+    stream: function(cursor, db){                                // recursively read cards from database to update cache
+        process.nextTick(function nextCard(){                    // yeild to a potential card scan
+            cursor.nextObject(function onCard(error, card){
+                if(card){
+                    cache.updateCard(card);                      // update local cache to be in sync with source of truth
+                    cron.stream(cursor, db);                     // continue stream
+                } else {
+                    if(error){slack.channelMsg('master_slacker','Doorboto stream error: ' + error);}
+                    db.close();
+                }                             // close connection: keep in mind tracking if we are connected is more work
+            });
+        });
+    }
 };
 
-var mongo = { // depends on: mongoose
-    ose: require('mongoose'),
-    uri: process.env.MONGO_URI,
-    cards: function(){
-        return new mongo.ose.Schema({                                          // Read only by doorboto -- Write only by Interface
-            id: mongo.ose.Schema.ObjectId,
-            uid: {type: String, required: '{PATH} is required', unique: true}, // UID of card, collection find key
-            holder: {type: String, required: '{PATH} is required'},            // leave messages about dated cards without looking up member
-            member_id: {type: String},                                         // _id of member object, fastest way to look up a member
-            cardToken: {type: String},                                         // 8 byte QID unique to member, proposing to use w/ UID
-            expiry: {type: Number},                                            // expiration of this member
-            validity: {type: String, required: '{PATH} is required'}           // activeMember, nonMember, expired, revoked, lost, stolen
-        });
-    },
-    rejections: function(){
-        return new mongo.ose.Schema({                                 // rejected cards, Shows cards to register, Write only by doorboto
-            id: mongo.ose.Schema.ObjectId,
-            uid: {type: String, required: '{PATH} is required'},
-            holder: {type: String},                                   // if in db note member this could change if card are reused
-            validity: {type: String, required: '{PATH} is required'}, // validity at time of scan, set to unregistered if not in db
-            timeOf: {type: Date, default: Date.now}
-        });
-    },
-    connectAndDo: function(success, fail){
-        var connection = mongo.ose.createConnection(mongo.uri);
-        var dbModel = {}; // object of models to pass on
-        dbModel.cards = connection.model('cards', mongo.cards());
-        dbModel.rejections = connection.model('rejections', mongo.rejections());
-        connection.on('connected', function(){
-            success(dbModel, function close(){connection.close();});
-        });
-        connection.on('open', function(){
-            // could do somethings here maybe?
-        });
-        connection.on('disconnected', function(){console.log('disconnected from db');});
-        connection.on('error', function(error){       // prevents doorboto2 from completly eating shit
-            fail(error);                              // there are no errors only unintended results
+var mongo = {
+    MAKERAUTH: 'makerauth',
+    URI: process.env.MONGO_URI,
+    client: require('mongodb').MongoClient,
+    ObjectId: require('mongodb').ObjectID,
+    connectAndDo: function(connected, failed){         // url to db and what well call this db in case we want multiple
+        mongo.client.connect(mongo.URI, function onConnect(error, db){
+            if(db){connected(db);} // passes database object so databasy things can happen
+            else  {slack.channelMsg('master_slacker','Doorboto connection error: ' + error);}
         });
     }
 };
@@ -196,7 +179,6 @@ var arduino = {                          // does not need to be connected to an 
 };
 
 // High level start up sequence
-mongo.ose.Promise = Promise; // Silences shitty message about deprecated internal promise library, would work if not node v10.33 on yun
 cache.persist.init();                                               // set up local cache
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
 cron.update();                                                      // run a time based stream that updates local cache
