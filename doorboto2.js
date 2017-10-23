@@ -9,7 +9,6 @@ var cache = {                          // local cache logic for power or databas
         };
         cache.persist.setItem(card.uid, cardInfo); // setItem works like and upsert, this also creates cards
     },
-    removeCard: function(card){cache.persist.removeItem(card.uid);}, // NOT USING this just so you know how
     check: function(cardID, onSuccess, onFail){                      // hold cardID and callbacks in closure
         return function cacheCheck(){                                // returns callback to occur on failed db connection
             var strangerDanger = true;                               // not if card is familiar or not
@@ -105,7 +104,6 @@ var cron = {  // runs a time based update opperation
 };
 
 var mongo = {
-    MAKERAUTH: 'makerauth',
     URI: process.env.MONGO_URI,
     client: require('mongodb').MongoClient,
     ObjectId: require('mongodb').ObjectID,
