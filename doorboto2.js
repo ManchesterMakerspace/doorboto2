@@ -4,7 +4,7 @@ var cache = {                          // local cache logic for power or databas
     updateCard: function(card){        // processes cards
         var cardInfo = {               // filter down to only the properties we would like to save
             'holder':   card.holder,
-            'expiry':   card.expiry,
+            'expiry':   Number(card.expiry), // just be extra sure that this is indeed a number it needs to be
             'validity': card.validity,
         };
         cache.persist.setItem(card.uid, cardInfo); // setItem works like and upsert, this also creates cards
@@ -81,12 +81,11 @@ var auth = {
 var cron = {  // runs a time based update opperation
     FREQUENCY: 3600000,                                          // every hour update cache (in milliseconds)
     update: function(){                                          // recursively called every day
-        mongo.connectAndDo(cron.stream, cron.failCase);          // connect to mongo and start an update stream
+        mongo.connectAndDo(cron.start);                          // connect to mongo and start an update stream
         setTimeout(cron.update, cron.FREQUENCY);                 // make upcomming expiration check every interval
     },
     start: function(db){
-        var cursor = db.collection('cards').find({});            // grab cursor to parse through all cards
-        cron.stream(cursor, db);
+        cron.stream(db.collection('cards').find({}), db);        // pass cursor to iteate through and database to close on
     },
     stream: function(cursor, db){                                // recursively read cards from database to update cache
         process.nextTick(function nextCard(){                    // yeild to a potential card scan
@@ -107,9 +106,9 @@ var mongo = {
     URI: process.env.MONGO_URI,
     client: require('mongodb').MongoClient,
     ObjectId: require('mongodb').ObjectID,
-    connectAndDo: function(connected, failed){         // url to db and what well call this db in case we want multiple
+    connectAndDo: function(connected){   // url to db and what well call this db in case we want multiple
         mongo.client.connect(mongo.URI, function onConnect(error, db){
-            if(db){connected(db);} // passes database object so databasy things can happen
+            if(db){connected(db);}       // passes database object so databasy things can happen
             else  {slack.channelMsg('master_slacker','Doorboto connection error: ' + error);}
         });
     }
