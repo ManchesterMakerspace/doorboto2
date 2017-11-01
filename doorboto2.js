@@ -78,6 +78,23 @@ var auth = {
     }
 };
 
+var slack = {
+    webhook: require('@slack/client').IncomingWebhook,   // url to slack intergration called "webhook" can post to any channel as a "bot"
+    URL: process.env.SLACK_WEBHOOK_URL,
+    send: function(msg, channel){
+        properties = {
+            username: 'Doorboto',
+            channel: channel,
+            iconEmoji: ':robot:'
+        };
+        var sendObj = new slack.webhook(slack.URL, properties);
+        sendObj.send(msg, function response(error, header, statusCode, body){
+            if(error){console('slack issue: ' + error);}
+            else{console.log(statusCode + '~ sent message:' + msg);}
+        });
+    }
+};
+
 var cron = {  // runs a time based update opperation
     FREQUENCY: 3600000,                                          // every hour update cache (in milliseconds)
     update: function(){                                          // recursively called every day
@@ -94,7 +111,7 @@ var cron = {  // runs a time based update opperation
                     cache.updateCard(card);                      // update local cache to be in sync with source of truth
                     cron.stream(cursor, db);                     // continue stream
                 } else {
-                    if(error){slack.channelMsg('master_slacker','Doorboto stream error: ' + error);}
+                    if(error){slack.send('Doorboto stream error: ' + error, 'infrastructure');}
                     db.close();
                 }                             // close connection: keep in mind tracking if we are connected is more work
             });
@@ -109,36 +126,8 @@ var mongo = {
     connectAndDo: function(connected){   // url to db and what well call this db in case we want multiple
         mongo.client.connect(mongo.URI, function onConnect(error, db){
             if(db){connected(db);}       // passes database object so databasy things can happen
-            else  {slack.channelMsg('master_slacker','Doorboto connection error: ' + error);}
+            else  {slack.send('Doorboto connection error: ' + error , 'infrastructure');}
         });
-    }
-};
-
-var slack = {
-    io: require('socket.io-client'),                           // to connect to our slack intergration server
-    connected: false,                                          // tell us whether to log or send to slack
-    init: function(intergrationServer, authToken){
-        slack.socketio = slack.io(intergrationServer);
-        slack.socketio.on('connect', function authenticate(){  // connect with masterslacker
-            slack.socketio.emit('authenticate', {
-                token: authToken,
-                slack: {
-                    username: 'Doorboto2',
-                    channel: process.env.CHANNEL,
-                    iconEmoji: ':robot_face:'
-                }
-            }); // its important lisner know that we are for real
-            slack.connected = true;
-        });
-        slack.socketio.on('disconnect', function disconnected(){slack.connected = false;});
-    },
-    send: function(msg){
-        if(slack.connected){ slack.socketio.emit('msg', msg);
-        } else { console.log('404:'+msg); }
-    },
-    channelMsg: function(channel, msg){
-        if(slack.connected){ slack.socketio.emit('channelMsg', {channel: channel, msg: msg});
-        } else { console.log('err:' + msg);}
     }
 };
 
@@ -167,11 +156,11 @@ var arduino = {                          // does not need to be connected to an 
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
-        slack.send(memberName + ' just checked in'); // let members know through slack // TODO need a send to authrized services method
+        slack.send(memberName + ' just checked in', 'doorboto'); // let members know through slack // TODO need a send to authrized services method
     },                                               // TODO like Kevin's cameras
     denyAccess: function(msg){                       // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
-        slack.send('denied access: ' + msg);         // let members know through slack
+        slack.send('denied access: ' + msg, 'doorboto');         // let members know through slack
     }
 };
 
@@ -179,4 +168,3 @@ var arduino = {                          // does not need to be connected to an 
 cache.persist.init();                                               // set up local cache
 arduino.init(process.env.ARDUINO_PORT);                             // serial connect to arduino
 cron.update();                                                      // run a time based stream that updates local cache
-slack.init(process.env.MASTER_SLACKER, process.env.CONNECT_TOKEN);  // set up connection to our slack intergration server
