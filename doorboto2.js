@@ -85,7 +85,7 @@ var slack = {
         properties = {
             username: 'Doorboto',
             channel: channel,
-            iconEmoji: ':robot:'
+            iconEmoji: ':robot_face:'
         };
         var sendObj = new slack.webhook(slack.URL, properties);
         sendObj.send(msg, function response(error, header, statusCode, body){
