@@ -70,7 +70,7 @@ var auth = {
             uid: card.uid,                                           // should always have uid
             holder: card.holder ? card.holder : null,                // we only get this when a recorded card holder is rejected
             validity: card.validity ? card.validity : 'unregistered',// important to know this is an unregistered card if info missing
-            timeOf: {$date: new Date().toISOString()}                // should be same as mongoose default
+            timeOf: new Date()                                       // should be same as mongoose default
         }, function(error, data){
             if(error){console.log(error + ': Could not save reject -> ' + card.uid);} // knowing who it was might be important
             db.close(); // error or not close connection to db after saving a rejection
