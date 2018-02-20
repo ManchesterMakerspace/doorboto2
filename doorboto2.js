@@ -141,22 +141,24 @@ var arduino = {                          // does not need to be connected to an 
         });
         arduino.serial.on('open', function(){arduino.open(arduinoPort);});
         arduino.serial.on('data', arduino.read);
-        arduino.serial.on('close', arduino.close);
-        arduino.serial.on('error', arduino.error);
+        arduino.serial.on('close', arduino.reconnect(arduinoPort));
+        arduino.serial.on('error', arduino.reconnect(arduinoPort));
     },
     open: function(port){console.log('connected to: ' + port);}, // what to do when serial connection opens up with arduino
     read: function(data){                                        // getting data from Arduino, only expect a card
         var id = data.replace(/[^\x2F-\x7F]/g, '');              // remove everything except 0x2F through 0x7F on the ASCII table
         auth.orize(id, arduino.grantAccess, arduino.denyAccess); // check if this card has access
     },
-    close: function(){arduino.init();},                 // try to re-establish if serial connection is interupted TODO does this make sense?
-    error: function(error){                             // given something went wrong try to re-establish connection
-        setTimeout(arduino.init, arduino.RETRY_DELAY);  // retry every half a minute NOTE this will keep a heroku server awake
+    reconnect: function(port){
+        return function(error){                      // given something went wrong try to re-establish connection
+            if(error){console.log(error);}
+            setTimeout(function(){arduino.init(port);}, arduino.RETRY_DELAY);
+        }
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
-        slack.send(memberName + ' just checked in', 'doorboto'); // let members know through slack // TODO need a send to authrized services method
-    },                                               // TODO like Kevin's cameras
+        slack.send(memberName + ' just checked in', 'doorboto'); // let members know through slack
+    },
     denyAccess: function(msg){                       // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
         slack.send('denied access: ' + msg, 'doorboto');         // let members know through slack
