@@ -6,3 +6,4 @@ test_*.js
 test_*.txt
 members.txt
 .node-persist
+jitploy/decrypted_*
