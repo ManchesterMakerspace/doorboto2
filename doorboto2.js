@@ -89,7 +89,7 @@ var slack = {
         };
         var sendObj = new slack.webhook(slack.URL, properties);
         sendObj.send(msg, function response(error, header, statusCode, body){
-            if(error){console('slack issue: ' + error);}
+            if(error){console.log('slack issue: ' + error);}
         });
     }
 };
