@@ -25,12 +25,12 @@ var cache = {                          // local cache logic for power or databas
 
 var auth = {
     orize: function(cardID, onSuccess, onFail){
-        cache.check(cardID, onSuccess, function notInLocal(){
-            mongo.connectAndDo(
+        cache.check(cardID, onSuccess, function notInLocal(){   // Check in cache first its faster and up to date enough to be close to the source of truth
+            mongo.connectAndDo(                                 // given no local entry or rejection maybe this is a new one or card is more up to date in db
                 auth.mongoCardCheck(cardID, onSuccess, onFail), // if we can connect to mongo use db findOne
                 function failedToConnectToDB(){                 // not in local cache could not connect to db
-                    console.log(cardID + ' rejected: not in cache or failed to connect to db');
-                    onFail();                                   // sorry amnesia
+                    console.log(cardID + ' rejected');          // private to system log
+                    onFail('not in cache and failed to connect to db'); // sorry amnesia
                 }
             );
         })(); // cache.check returns a function, and that needs to be executed()
@@ -41,7 +41,7 @@ var auth = {
                 if(error){
                     db.close();                                        // close connection lets move on
                     console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
-                    cache.check(cardID, onSuccess, onFail)();          // if there is some sort or read error fallback to local data
+                    onFail(' not in cache, db error');                 // Sends event and message to slack if connected
                 } else if(card){                                       // given we got a record back from mongo
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
                         auth.reject(card, db);                         // Rejections: we have to wait till saved to close db
@@ -89,7 +89,7 @@ var slack = {
         };
         var sendObj = new slack.webhook(slack.URL, properties);
         sendObj.send(msg, function response(error, header, statusCode, body){
-            if(error){console.log('slack issue: ' + error);}
+            if(error){console.log(msg + ' -- slack issue: ' + error);}
         });
     }
 };
@@ -153,7 +153,7 @@ var arduino = {                          // does not need to be connected to an 
         return function(error){                      // given something went wrong try to re-establish connection
             if(error){console.log(error);}
             setTimeout(function(){arduino.init(port);}, arduino.RETRY_DELAY);
-        }
+        };
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
