@@ -84,7 +84,7 @@ var slack = {
     send: function(msg, channel){
         properties = {
             username: 'Doorboto',
-            channel: channel,
+            channel: channel ? channel : process.env.CHANNEL,
             iconEmoji: ':robot_face:'
         };
         var sendObj = new slack.webhook(slack.URL, properties);
@@ -157,11 +157,11 @@ var arduino = {                          // does not need to be connected to an 
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
-        slack.send(memberName + ' just checked in', 'doorboto'); // let members know through slack
+        slack.send(memberName + ' just checked in'); // let members know through slack
     },
     denyAccess: function(msg){                       // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
-        slack.send('denied access: ' + msg, 'doorboto');         // let members know through slack
+        slack.send('denied access: ' + msg);         // let members know through slack
     }
 };
 
