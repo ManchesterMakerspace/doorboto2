@@ -130,24 +130,21 @@ var mongo = {
     }
 };
 
+var SerialPort = require('serialport');  // on yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib, actually new library probably no good
 var arduino = {                          // does not need to be connected to an arduino, will try to connect to one though
     RETRY_DELAY: 5000,
-    serialport: require('serialport'),   // yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib
     init: function(arduinoPort){
-        arduino.serial = new arduino.serialport.SerialPort(arduinoPort, {
-            baudrate: 9600,              // remember to set you sketch to go this same speed
-            parser: arduino.serialport.parsers.readline('\n'),
-            autoOpen: false
-        });
+        arduino.serial = new SerialPort(arduinoPort, {baudRate: 9600});
+        arduino.parser = new SerialPort.parsers.Readline({delimiter: '\r\n'});
+        arduino.serial.pipe(arduino.parser);        // pipe read data through chosen parser
         arduino.serial.on('open', function(){arduino.open(arduinoPort);});
-        arduino.serial.on('data', arduino.read);
+        arduino.parser.on('data', arduino.read); // Be sure to use parser that date stream is being piped into..
         arduino.serial.on('close', arduino.reconnect(arduinoPort));
         arduino.serial.on('error', arduino.reconnect(arduinoPort));
     },
-    open: function(port){console.log('connected to: ' + port);}, // what to do when serial connection opens up with arduino
-    read: function(data){                                        // getting data from Arduino, only expect a card
-        var id = data.replace(/[^\x2F-\x7F]/g, '');              // remove everything except 0x2F through 0x7F on the ASCII table
-        auth.orize(id, arduino.grantAccess, arduino.denyAccess); // check if this card has access
+    open: function(port){console.log('connected to: ' + port);},   // what to do when serial connection opens up with arduino
+    read: function(data){                                          // getting data from Arduino, only expect a card
+        auth.orize(data, arduino.grantAccess, arduino.denyAccess); // check if this card has access
     },
     reconnect: function(port){
         return function(error){                      // given something went wrong try to re-establish connection
