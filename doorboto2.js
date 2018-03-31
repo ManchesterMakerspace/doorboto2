@@ -38,7 +38,7 @@ var record = {                                                       // collecti
     },
     checkin: function(member, db){     // keeps check in history for an active membership count
         db.collection('checkins').insertOne({
-            _id: new mongo.ObjectID(),
+            _id: new mongo.ObjectId(),
             name: member,
             time: new Date().getTime()
         }, function(error, data){
@@ -70,7 +70,7 @@ var auth = {
                 } else if(card){                                       // given we got a record back from mongo
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
                         record.reject(card, db);                       // Rejections: we have to wait till saved to close db
-                    } else {record.checkin(card.holder, db);}          // record checkin to track access statistics
+                    } else {db.close();}                               // not sure if this is actually being called...
                     cache.updateCard(card);                            // keep local redundant data cache up to date
                 } else {                                               // no error, no card, this card is unregistered
                     onFail('unregistered card');                       // we want these to show up somewhere to register new cards
@@ -167,6 +167,7 @@ var arduino = {                          // does not need to be connected to an 
     },
     grantAccess: function(memberName){               // is called on successful authorization
         arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
+        mongo.connectAndDo(function(db){record.checkin(memberName, db);});
         slack.send(memberName + ' just checked in'); // let members know through slack
     },
     denyAccess: function(msg){                       // is called on failed authorization
