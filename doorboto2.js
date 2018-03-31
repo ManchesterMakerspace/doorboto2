@@ -23,6 +23,31 @@ var cache = {                          // local cache logic for power or databas
     }
 };
 
+var record = {                                                       // collection of methods that write to makerspace database
+    reject: function(card, db){
+        db.collection('rejections').insertOne({
+            _id: new mongo.ObjectId(),                               // do this so database doesn't need to
+            uid: card.uid,                                           // should always have uid
+            holder: card.holder ? card.holder : null,                // we only get this when a recorded card holder is rejected
+            validity: card.validity ? card.validity : 'unregistered',// important to know this is an unregistered card if info missing
+            timeOf: new Date()                                       // should be same as mongoose default
+        }, function(error, data){
+            if(error){console.log(error + ': Could not save reject -> ' + card.uid);} // knowing who it was might be important
+            db.close(); // error or not close connection to db after saving a rejection
+        });
+    },
+    checkin: function(member, db){     // keeps check in history for an active membership count
+        db.collection('checkins').insertOne({
+            _id: new mongo.ObjectID(),
+            name: member,
+            time: new Date().getTime()
+        }, function(error, data){
+            if(error){console.log(error + '; could not save check in for -> ' + member);}
+            db.close();                // error or not close connection to db after check in
+        });
+    }
+};
+
 var auth = {
     orize: function(cardID, onSuccess, onFail){
         cache.check(cardID, onSuccess, function notInLocal(){   // Check in cache first its faster and up to date enough to be close to the source of truth
@@ -44,12 +69,12 @@ var auth = {
                     onFail(' not in cache, db error');                 // Sends event and message to slack if connected
                 } else if(card){                                       // given we got a record back from mongo
                     if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
-                        auth.reject(card, db);                         // Rejections: we have to wait till saved to close db
-                    } else { db.close(); }                             // close connection to db regardless
+                        record.reject(card, db);                       // Rejections: we have to wait till saved to close db
+                    } else {record.checkin(card.holder, db);}          // record checkin to track access statistics
                     cache.updateCard(card);                            // keep local redundant data cache up to date
                 } else {                                               // no error, no card, this card is unregistered
                     onFail('unregistered card');                       // we want these to show up somewhere to register new cards
-                    auth.reject({uid: cardID}, db);                    // so lets put them in mongo
+                    record.reject({uid: cardID}, db);                  // so lets put them in mongo
                 }
             });
         };
@@ -63,18 +88,6 @@ var auth = {
             } else {onFail(card.holder + ' has expired');}                     // given members time is up we want a polite message
         } else {onFail(card.holder + "'s " + card.validity + ' card was scanned');} // context around rejections is helpful
         return rejected;                                                       // would rather leave calling fuction to decide what to do
-    },
-    reject: function(card, db){
-        db.collection('rejections').insertOne({
-            _id: new mongo.ObjectId(),                               // do this so database doesn't need to
-            uid: card.uid,                                           // should always have uid
-            holder: card.holder ? card.holder : null,                // we only get this when a recorded card holder is rejected
-            validity: card.validity ? card.validity : 'unregistered',// important to know this is an unregistered card if info missing
-            timeOf: new Date()                                       // should be same as mongoose default
-        }, function(error, data){
-            if(error){console.log(error + ': Could not save reject -> ' + card.uid);} // knowing who it was might be important
-            db.close(); // error or not close connection to db after saving a rejection
-        });
     }
 };
 
