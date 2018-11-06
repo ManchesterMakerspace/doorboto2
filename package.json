@@ -20,9 +20,9 @@
   "homepage": "https://github.com/ManchesterMakerspace/doorboto2#readme",
   "private": true,
   "dependencies": {
-    "@slack/client": "^3.14.1",
     "mongodb": "^2.2.33",
     "node-persist": "^2.0.10",
+    "request": "^2.88.0",
     "serialport": "^6.1.1"
   },
   "engines": {

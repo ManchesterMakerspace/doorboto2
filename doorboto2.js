@@ -94,18 +94,13 @@ var auth = {
     }
 };
 
+var request = require('request');
 var slack = {
-    webhook: require('@slack/client').IncomingWebhook,   // url to slack intergration called "webhook" can post to any channel as a "bot"
-    URL: process.env.SLACK_WEBHOOK_URL,
-    send: function(msg, channel){
-        properties = {
-            username: 'Doorboto',
-            channel: channel ? channel : process.env.CHANNEL,
-            iconEmoji: ':robot_face:'
-        };
-        var sendObj = new slack.webhook(slack.URL, properties);
-        sendObj.send(msg, function response(error, header, statusCode, body){
-            if(error){console.log(msg + ' -- slack issue: ' + error);}
+    send: function(msg, issue){
+        var options = { uri: process.env.DOORBOTO_WEBHOOK, method: 'POST', json: {'text': msg} };
+        if(issue){console.log(msg + ' : ' + issue);}
+        request(options, function requestResponse(error, response, body){
+            if(error){console.log('webhook request error ' + error);}
         });
     }
 };
@@ -125,7 +120,7 @@ var cron = {  // runs a time based update opperation
                     cache.updateCard(card);                      // update local cache to be in sync with source of truth
                     cron.stream(cursor, db);                     // continue stream
                 } else {
-                    if(error){slack.send('Doorboto stream error: ' + error, 'infrastructure');}
+                    if(error){slack.send('Update issue', error);}
                     db.close();
                 }                             // close connection: keep in mind tracking if we are connected is more work
             });
@@ -140,7 +135,7 @@ var mongo = {
     connectAndDo: function(connected){   // url to db and what well call this db in case we want multiple
         mongo.client.connect(mongo.URI, function onConnect(error, db){
             if(db){connected(db);}       // passes database object so databasy things can happen
-            else  {slack.send('Doorboto connection error: ' + error , 'infrastructure');}
+            else  { slack.send('failed to connect to database', error); }
         });
     }
 };
