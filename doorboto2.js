@@ -1,4 +1,7 @@
 // doorboto2.js ~ Copyright 2017 Manchester Makerspace ~ License MIT
+var HOUR = 3600000;                    // an hour in milliseconds
+var LENIANCY = HOUR * 72;              // give 3 days for a card to be renewed
+
 var cache = {                          // local cache logic for power or database failure events
     persist: require('node-persist'),  // methods for storing JSON objects in local files
     updateCard: function(card){        // processes cards
@@ -82,7 +85,7 @@ var auth = {
     checkRejection: function(card, onSuccess, onFail){                         // When we have an actual record to check
         var rejected = true;                                                   // returns if card was reject if caller cares
         if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
-            if( new Date().getTime() < new Date(card.expiry).getTime()){       // make sure card is not expired
+            if( new Date().getTime() < new Date(card.expiry).getTime() + LENIANCY){ // make sure card is not expired
                 onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
                 rejected = false;                                              // congrats you're not rejected
             } else {onFail(card.holder + ' has expired');}                     // given members time is up we want a polite message
@@ -108,10 +111,9 @@ var slack = {
 };
 
 var cron = {  // runs a time based update opperation
-    FREQUENCY: 3600000,                                          // every hour update cache (in milliseconds)
     update: function(){                                          // recursively called every day
         mongo.connectAndDo(cron.start);                          // connect to mongo and start an update stream
-        setTimeout(cron.update, cron.FREQUENCY);                 // make upcomming expiration check every interval
+        setTimeout(cron.update, HOUR);                           // make upcomming expiration check every interval
     },
     start: function(db){
         cron.stream(db.collection('cards').find({}), db);        // pass cursor to iteate through and database to close on
