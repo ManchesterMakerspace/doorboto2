@@ -88,8 +88,8 @@ var auth = {
             if( new Date().getTime() < new Date(card.expiry).getTime() + LENIANCY){ // make sure card is not expired
                 onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
                 rejected = false;                                              // congrats you're not rejected
-            } else {onFail(card.holder + ' has expired');}                     // given members time is up we want a polite message
-        } else {onFail(card.holder + "'s " + card.validity + ' card was scanned');} // context around rejections is helpful
+            } else {onFail(card.holder + ' has expired', card.holder);}                          // given members time is up we want a polite message
+        } else {onFail(card.holder + "'s " + card.validity + ' card was scanned', card.holder);} // context around rejections is helpful
         return rejected;                                                       // would rather leave calling fuction to decide what to do
     }
 };
@@ -97,8 +97,11 @@ var auth = {
 var request = require('request');
 var slack = {
     send: function(msg, issue){
-        var options = { uri: process.env.DOORBOTO_WEBHOOK, method: 'POST', json: {'text': msg} };
         if(issue){console.log(msg + ' : ' + issue);}
+        slack.rawSend(msg, process.env.DOORBOTO_WEBHOOK);
+    },
+    rawSend: function(msg, webhook){
+        var options = { uri: webhook, method: 'POST', json: {'text': msg} };
         request(options, function requestResponse(error, response, body){
             if(error){console.log('webhook request error ' + error);}
         });
@@ -167,8 +170,11 @@ var arduino = {                          // does not need to be connected to an 
         mongo.connectAndDo(function(db){record.checkin(memberName, db);});
         slack.send(memberName + ' just checked in'); // let members know through slack
     },
-    denyAccess: function(msg){                       // is called on failed authorization
+    denyAccess: function(msg, member){               // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
+        if(member){
+            slack.rawSend('<!channel> ```' + msg + '```, maybe we missed renewing them or they need to be reached out to?', process.env.MR_WEBHOOK);
+        }
         slack.send('denied access: ' + msg);         // let members know through slack
     }
 };
