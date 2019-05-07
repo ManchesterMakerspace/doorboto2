@@ -173,7 +173,7 @@ var arduino = {                          // does not need to be connected to an 
     denyAccess: function(msg, member){               // is called on failed authorization
         arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
         if(member){
-            slack.rawSend('<!channel> ```' + msg + '```, maybe we missed renewing them or they need to be reached out to?', process.env.MR_WEBHOOK);
+            slack.rawSend('<!channel> ```' + msg + '``` Maybe we missed renewing them or they need to be reached out to?', process.env.MR_WEBHOOK);
         }
         slack.send('denied access: ' + msg);         // let members know through slack
     }
