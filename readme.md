@@ -7,7 +7,6 @@
 * Dynamo connection for activity tracking is intended but not required
 * Arduino IDE (on dev machine to program the reader/latch)
 * Arduino rfid reader and door latch relay, firmware included in /yunDoorbotoFirmware (Sorry no schematics, the current implementation works and is reliable, but could use to be a lot less hacked together to deserve its own documentation)
-* Jitploy: To continuously deploy a pre-configured doorboto, that stays up to date with the master branch
 
 ### Setup
 
@@ -29,5 +28,6 @@ Why not use wifi connected Arduino or similar?
 - Free desktop and free arduino nano was cheaper
 Why not use a Raspberry Pi, you had a free one of those?
 - SD card corrupted at the time
+Update: we are currently using a pi using a usb drive instead of an SD.
 
 Copyright 2016 ~ Manchester Makerspace ~ MIT License
