@@ -3,10 +3,10 @@
 var auth = {
     orize: function(cardID, onSuccess, onFail){
         if (cardID === process.env.APPROVED_CARD){
-          console.log("")
+          console.log("Accept: " + cardId);
           onSuccess();
         } else {
-          console.log("Denied: " + cardID)
+          console.log("Denied: " + cardID);
           onFail();
         }
     }
