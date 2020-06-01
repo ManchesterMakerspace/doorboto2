@@ -1,5 +1,6 @@
 // yunDoorbotoFirmware.ino ~ Copyright 2017  Manchester Makerspace ~ License MIT
-// This sketch just bust out card ids to Yun when they are scanned
+// This sketch sends card ids to the raspberry pi over the serial port when scanned, and switches relay output based on the response from the pi.
+// Member is provided with status via Blinking LED's
 
 #include <SPI.h>      // local arduino library
 #include <MFRC522.h>  // https://github.com/miguelbalboa/rfid
@@ -25,7 +26,12 @@ void setup(){
   pinMode(RED_LED, OUTPUT);   // use LED
   pinMode(GREEN_LED, OUTPUT); // use LED
   pinMode(RELAY, OUTPUT);     // make relay pin an output
-}
+  
+  //blink LED's during bootup
+  blink(RED_LED, 15, 200);
+  delay(OPEN_TIME); //delay for a short period
+  blink(GREEN_LED, 15, 200);
+  }
 
 void loop(){
   getCardId();
@@ -64,7 +70,7 @@ char* getRequestUID(){ // Getting the ASCII representation of card's hex UID.
     cardReader.uid.uidByte[i] = 0;  // remove last (this) uid
   }
   cardReader.uid.size = 0;          // make sure this is read only once
-  buffer[index] = "\0";             // terminate char array!
+  buffer[index] = '\0';             // terminate char array!
   return buffer;
 }
 
