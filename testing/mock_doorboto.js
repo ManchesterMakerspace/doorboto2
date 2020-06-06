@@ -3,11 +3,11 @@
 const auth = {
     orize: function(cardID, onSuccess, onFail){
         if (cardID === process.env.APPROVED_CARD){
-          console.log("Accept: " + cardId);
-          onSuccess();
+            console.log("Accept: " + cardId);
+            onSuccess();
         } else {
-          console.log("Denied: " + cardID);
-          onFail();
+            console.log("Denied: " + cardID);
+            onFail();
         }
     }
 };
