@@ -1,6 +1,6 @@
 // mock_doorboto.js ~ Copyright 2020 Manchester Makerspace ~ License MIT
 
-var auth = {
+const auth = {
     orize: function(cardID, onSuccess, onFail){
         if (cardID === process.env.APPROVED_CARD){
           console.log("Accept: " + cardId);
@@ -12,8 +12,8 @@ var auth = {
     }
 };
 
-var SerialPort = require('serialport');  // on yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib, actually new library probably no good
-var arduino = {                          // does not need to be connected to an arduino, will try to connect to one though
+const SerialPort = require('serialport');  // on yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib, actually new library probably no good
+const arduino = {                          // does not need to be connected to an arduino, will try to connect to one though
     RETRY_DELAY: 5000,
     init: function(arduinoPort){
         arduino.serial = new SerialPort(arduinoPort, {baudRate: 9600});
@@ -34,11 +34,12 @@ var arduino = {                          // does not need to be connected to an 
             setTimeout(function(){arduino.init(port);}, arduino.RETRY_DELAY);
         };
     },
-    grantAccess: function(memberName){               // is called on successful authorization
-        arduino.serial.write('<a>');                 // a char grants access: wakkas help arduino know this is a distinct command
+    grantAccess: function(){          // is called on successful authorization
+        arduino.serial.write('<a>');  // a char grants access: wakkas help arduino know this is a distinct command
     },
-    denyAccess: function(msg, member){               // is called on failed authorization
-        arduino.serial.write('<d>');                 // d char denies access: wakkas help arduino know this is a distinct command
+    denyAccess: function(){           // is called on failed authorization
+        arduino.serial.write('<d>');  // d char denies access: wakkas help arduino know this is a distinct command
+    }
 };
 
 // High level start up sequence
