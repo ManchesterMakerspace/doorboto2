@@ -1,6 +1,6 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
 import { connectDB, insertDoc } from './database_sync';
-import { slackSend } from './slack';
+import { serialInit } from './reader_com'
 
 const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
@@ -162,71 +162,7 @@ const cronUpdate = async () => {
   setTimeout(cronUpdate, HOUR);
 };
 
-const SerialPort = require('serialport');
-// on yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib, actually new library probably no good
-const arduino = {
-  // does not need to be connected to an arduino, will try to connect to one though
-  RETRY_DELAY: 5000,
-  init: function (arduinoPort) {
-    arduino.serial = new SerialPort(arduinoPort, { baudRate: 9600 });
-    arduino.parser = new SerialPort.parsers.Readline({ delimiter: '\r\n' });
-    arduino.serial.pipe(arduino.parser);
-    // pipe read data through chosen parser
-    arduino.serial.on('open', function () {
-      arduino.open(arduinoPort);
-    });
-    arduino.parser.on('data', arduino.read);
-    // Be sure to use parser that date stream is being piped into..
-    arduino.serial.on('close', arduino.reconnect(arduinoPort));
-    arduino.serial.on('error', arduino.reconnect(arduinoPort));
-  },
-  open: function (port) {
-    console.log('connected to: ' + port);
-  }, // what to do when serial connection opens up with arduino
-  read: function (data) {
-    // getting data from Arduino, only expect a card
-    auth.orize(data, arduino.grantAccess, arduino.denyAccess);
-    // check if this card has access
-  },
-  reconnect: function (port) {
-    return function (error) {
-      // given something went wrong try to re-establish connection
-      if (error) {
-        console.log(error);
-      }
-      setTimeout(function () {
-        arduino.init(port);
-      }, arduino.RETRY_DELAY);
-    };
-  },
-  grantAccess: async (memberName) => {
-    // is called on successful authorization
-    arduino.serial.write('<a>');
-    // a char grants access: wakkas help arduino know this is a distinct command
-    try {
-      const {db, closeDb} = await connectDB();
-      record.checkin(memberName, db, closeDb);
-    } catch (error){
-      console.log(`Issue writing checkin to db on connect ${error}`);
-    }
-    slackSend(`${memberName} just checked in`);
-  },
-  denyAccess: function (msg, member) {
-    // is called on failed authorization
-    arduino.serial.write('<d>');
-    // d char denies access: wakkas help arduino know this is a distinct command
-    if (member) {
-      const adminMsg =
-        '<!channel> ```' +
-          msg +
-          '``` Maybe we missed renewing them or they need to be reached out to?';
-      slackSend(adminMsg, process.env.MR_WEBHOOK);
-    }
-    slackSend(`denied access: ${msg}`);
-  },
-};
-
 // High level start up sequence
 cache.persist.init(); // set up local cache
-arduino.init(process.env.ARDUINO_PORT); // serial connect to arduino
+serialInit(); // serial connect to arduino
 cronUpdate(); // run a time based stream that updates local cache
