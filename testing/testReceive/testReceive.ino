@@ -2,13 +2,13 @@
 
 void setup(){
   Serial.begin(9600);      // open communication
-  // while(!INTERFACE){;}
+  // while(!INTERFACE){;}  // This should only matter for the atmel32u4 and like chips
   }
 
 void loop(){
-  // if sent "<a>" should recieve "a"
-  // if sent "<work>" should recieve "work"
-  Serial.println(blockingRecieve());
+  // if sent "<a>" should receive "a"
+  // if sent "<work>" should receive "work"
+  Serial.println(blockingReceive());
   while(Serial.available()){Serial.read();} // make sure serial buffer is clear
 }
 
@@ -16,19 +16,19 @@ void loop(){
 #define START_MARKER '<'
 #define END_MARKER '>'
 
-char* blockingRecieve(){
+char* blockingReceive(){
   char* response;                          // wait for a response from server
-  while(!response){response = recieve();}  // block until response
-  return response; // renturn pointer to recieve buffer when it is full
+  while(!response){response = receive();}  // block until response
+  return response; // renturn pointer to receive buffer when it is full
 }
 
-char* recieve(){
+char* receive(){
   static char buffer[BUFFER_SIZE];   // static buffer to point to
   static boolean inProgress = false; // note if read started
   static byte index = 0;             // note what is being read
 
-  if(Serial.available()) {            // is there anything to be read
-    char readChar = Serial.read();    // yes? read it
+  if(Serial.available()) {         // is there anything to be read
+    char readChar = Serial.read(); // yes? read it
     if(inProgress){                   // did we read start maker?
       if(readChar == END_MARKER){     // did we read end marker
         buffer[index] = '\0';         // --terminate the string
@@ -42,5 +42,5 @@ char* recieve(){
       }
     } else if(readChar == START_MARKER){inProgress = true;} // indicate when to read when start marker is seen
   }
-  return 0; // in the case the message has yet to be recieved
+  return 0; // in the case the message has yet to be received
 }
