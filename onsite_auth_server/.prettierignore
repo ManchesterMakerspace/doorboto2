@@ -1,0 +1,10 @@
+node_modules
+start.sh
+start.json
+pm2start.json
+test_*.js
+test_*.txt
+members.txt
+.node-persist
+jitploy/decrypted_*
+.vscode
