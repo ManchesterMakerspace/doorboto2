@@ -1,6 +1,6 @@
 // doorboto2.js ~ Copyright 2017 Manchester Makerspace ~ License MIT
 var HOUR = 3600000;                    // an hour in milliseconds
-var LENIANCY = HOUR * 72;              // give 3 days for a card to be renewed
+var LENIENCY = HOUR * 72;              // give 3 days for a card to be renewed
 
 var cache = {                          // local cache logic for power or database failure events
     persist: require('node-persist'),  // methods for storing JSON objects in local files
@@ -71,7 +71,7 @@ var auth = {
                     console.log('mongo findOne error: ' + error);      // Log error to debug possible mongo problem
                     onFail(' not in cache, db error');                 // Sends event and message to slack if connected
                 } else if(card){                                       // given we got a record back from mongo
-                    if(auth.checkRejection(card, onSuccess, onFail)){  // acceptence logic, this function cares about rejection
+                    if(auth.checkRejection(card, onSuccess, onFail)){  // acceptance logic, this function cares about rejection
                         record.reject(card, db);                       // Rejections: we have to wait till saved to close db
                     } else {db.close();}                               // not sure if this is actually being called...
                     cache.updateCard(card);                            // keep local redundant data cache up to date
@@ -85,12 +85,12 @@ var auth = {
     checkRejection: function(card, onSuccess, onFail){                         // When we have an actual record to check
         var rejected = true;                                                   // returns if card was reject if caller cares
         if(card.validity === 'activeMember' || card.validity === 'nonMember'){ // make sure card has been marked with a valid state
-            if( new Date().getTime() < new Date(card.expiry).getTime() + LENIANCY){ // make sure card is not expired
+            if( new Date().getTime() < new Date(card.expiry).getTime() + LENIENCY){ // make sure card is not expired
                 onSuccess(card.holder);                                        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
                 rejected = false;                                              // congrats you're not rejected
             } else {onFail(card.holder + ' has expired', card.holder);}                          // given members time is up we want a polite message
         } else {onFail(card.holder + "'s " + card.validity + ' card was scanned', card.holder);} // context around rejections is helpful
-        return rejected;                                                       // would rather leave calling fuction to decide what to do
+        return rejected;                                                       // would rather leave calling function to decide what to do
     }
 };
 
@@ -108,16 +108,16 @@ var slack = {
     }
 };
 
-var cron = {  // runs a time based update opperation
+var cron = {  // runs a time based update operation
     update: function(){                                          // recursively called every day
         mongo.connectAndDo(cron.start);                          // connect to mongo and start an update stream
-        setTimeout(cron.update, HOUR);                           // make upcomming expiration check every interval
+        setTimeout(cron.update, HOUR);                           // make upcoming expiration check every interval
     },
     start: function(db){
-        cron.stream(db.collection('cards').find({}), db);        // pass cursor to iteate through and database to close on
+        cron.stream(db.collection('cards').find({}), db);        // pass cursor to iterate through and database to close on
     },
     stream: function(cursor, db){                                // recursively read cards from database to update cache
-        process.nextTick(function nextCard(){                    // yeild to a potential card scan
+        process.nextTick(function nextCard(){                    // yield to a potential card scan
             cursor.nextObject(function onCard(error, card){
                 if(card){
                     cache.updateCard(card);                      // update local cache to be in sync with source of truth
@@ -137,7 +137,7 @@ var mongo = {
     ObjectId: require('mongodb').ObjectID,
     connectAndDo: function(connected){   // url to db and what well call this db in case we want multiple
         mongo.client.connect(mongo.URI, function onConnect(error, db){
-            if(db){connected(db);}       // passes database object so databasy things can happen
+            if(db){connected(db);}       // passes database object so database things can happen
             else  { slack.send('failed to connect to database', error); }
         });
     }
