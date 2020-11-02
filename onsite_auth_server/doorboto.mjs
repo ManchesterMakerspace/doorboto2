@@ -1,5 +1,6 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-import { connectDB, insertDoc } from './database_sync.js';
+import { connectDB, insertDoc } from './database_sync';
+import { slackSend } from './slack';
 
 const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
@@ -141,24 +142,6 @@ const auth = {
   },
 };
 
-const request = require('request');
-const slack = {
-  send: function (msg, issue) {
-    if (issue) {
-      console.log(msg + ' : ' + issue);
-    }
-    slack.rawSend(msg, process.env.DOORBOTO_WEBHOOK);
-  },
-  rawSend: function (msg, webhook) {
-    const options = { uri: webhook, method: 'POST', json: { text: msg } };
-    request(options, function requestResponse(error) {
-      if (error) {
-        console.log('webhook request error ' + error);
-      }
-    });
-  },
-};
-
 // runs a time based update operation
 const cronUpdate = async () => {
   try {
@@ -178,7 +161,6 @@ const cronUpdate = async () => {
   // make upcoming expiration check every interval
   setTimeout(cronUpdate, HOUR);
 };
-
 
 const SerialPort = require('serialport');
 // on yun DO NOT NPM INSTALL -> opkg install node-serialport, use global lib, actually new library probably no good
@@ -227,22 +209,20 @@ const arduino = {
     } catch (error){
       console.log(`Issue writing checkin to db on connect ${error}`);
     }
-    slack.send(memberName + ' just checked in'); // let members know through slack
+    slackSend(`${memberName} just checked in`);
   },
   denyAccess: function (msg, member) {
     // is called on failed authorization
     arduino.serial.write('<d>');
     // d char denies access: wakkas help arduino know this is a distinct command
     if (member) {
-      slack.rawSend(
+      const adminMsg =
         '<!channel> ```' +
           msg +
-          '``` Maybe we missed renewing them or they need to be reached out to?',
-        process.env.MR_WEBHOOK
-      );
+          '``` Maybe we missed renewing them or they need to be reached out to?';
+      slackSend(adminMsg, process.env.MR_WEBHOOK);
     }
-    slack.send('denied access: ' + msg);
-    // let members know through slack
+    slackSend(`denied access: ${msg}`);
   },
 };
 
