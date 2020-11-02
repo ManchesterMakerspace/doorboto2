@@ -7,3 +7,4 @@ test_*.txt
 members.txt
 .node-persist
 jitploy/decrypted_*
+.vscode
