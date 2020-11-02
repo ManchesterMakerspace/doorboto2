@@ -11,7 +11,7 @@
 #define SS_PIN    10
 #define RST_PIN   9
 #define INTERFACE Serial // quickly switch between Serial and Serial1 for testing purposes
-#define BUFFER_SIZE 32   // buffer for serial recieve and get UID
+#define BUFFER_SIZE 32   // buffer for serial receive and get UID
 
 MFRC522 cardReader = MFRC522(SS_PIN, RST_PIN);
 
@@ -35,7 +35,7 @@ void loop(){
 void getCardId(){
   if(cardReader.PICC_IsNewCardPresent() && cardReader.PICC_ReadCardSerial()){
     INTERFACE.println(getRequestUID());      // send UID to relay
-    char* response = blockingRecieve();      // wait for a response from server
+    char* response = blockingReceive();      // wait for a response from server
     if(strcmp(response, "a") == 0){          // a is for acceptance
       digitalWrite(RELAY, HIGH);             // open relay, so member can come in
       blink(GREEN_LED, 10, 50);              // blink green led to show success
@@ -44,7 +44,7 @@ void getCardId(){
       blink(RED_LED, 15, 200);               // indicate failure w/ red led blink
       digitalWrite(RED_LED, HIGH);
     }
-    delay(OPEN_TIME);                        // wait amount of time relay needs to be open or to hold off a would be atacker
+    delay(OPEN_TIME);                        // wait amount of time relay needs to be open or to hold off a would be attacker
     digitalWrite(RELAY, LOW);                // stop sending current to relay
     digitalWrite(GREEN_LED, LOW);            // make sure green is off
     digitalWrite(RED_LED, LOW);              // make sure red is off
@@ -82,13 +82,13 @@ void blink(byte led, int amount, int durration){
 #define START_MARKER '<'
 #define END_MARKER '>'
 
-char* blockingRecieve(){
-  char* response;                          // wait for a response from server
-  while(!response){response = recieve();}  // block until response
-  return response; // renturn pointer to recieve buffer when it is full
+char* blockingReceive(){
+  char* response = receive();              // wait for a response from server
+  while(!response){response = receive();}  // block until response
+  return response; // renturn pointer to receive buffer when it is full
 }
 
-char* recieve(){
+char* receive(){
   static char buffer[BUFFER_SIZE];   // static buffer to point to
   static boolean inProgress = false; // note if read started
   static byte index = 0;             // note what is being read
@@ -108,5 +108,5 @@ char* recieve(){
       }
     } else if(readChar == START_MARKER){inProgress = true;} // indicate when to read when start marker is seen
   }
-  return 0; // in the case the message has yet to be recieved
+  return 0; // in the case the message has yet to be received
 }
