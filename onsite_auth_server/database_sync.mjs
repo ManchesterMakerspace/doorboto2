@@ -1,4 +1,4 @@
-// database_sync.js Copyright 2020 Manchester Makerspace Licence MIT
+// database_sync.mjs Copyright 2020 Manchester Makerspace Licence MIT
 import {MongoClient, ObjectID} from 'mongodb';
 
 const connectDB = async() => {

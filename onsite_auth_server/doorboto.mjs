@@ -164,5 +164,8 @@ const cronUpdate = async () => {
 
 // High level start up sequence
 cache.persist.init(); // set up local cache
-serialInit(); // serial connect to arduino
+serialInit({
+  authorize: auth.orize,
+  checkin: record.checkin,
+}); // serial connect to arduino
 cronUpdate(); // run a time based stream that updates local cache
