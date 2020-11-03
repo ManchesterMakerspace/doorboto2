@@ -1,44 +1,10 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-import { connectDB, insertDoc } from './storage/database_sync';
-import { serialInit } from './outward_telemetry/reader_com'
+import { connectDB, insertDoc } from './storage/database_sync.mjs';
+import { serialInit } from './outward_telemetry/reader_com.mjs';
+import { cacheSetup, updateCard, checkForCard } from './storage/on_site_cache.mjs';
 
 const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
-
-const cache = {
-  // local cache logic for power or database failure events
-  persist: require('node-persist'),
-  // methods for storing JSON objects in local files
-  updateCard: function (card) {
-    // processes cards
-    const cardInfo = {
-      // filter down to only the properties we would like to save
-      holder: card.holder,
-      expiry: Number(card.expiry),
-      // just be extra sure that this is indeed a number it needs to be
-      validity: card.validity,
-    };
-    cache.persist.setItem(card.uid, cardInfo);
-    // setItem works like and upsert, this also creates cards
-  },
-  check: function (cardID, onSuccess, onFail) {
-    // hold cardID and callbacks in closure
-    return function cacheCheck() {
-      // returns callback to occur on failed db connection
-      let strangerDanger = true; // not if card is familiar or not
-      cache.persist.forEach(function (key, card) {
-        if (key === cardID) {
-          strangerDanger = false; // mark card as now familiar
-          auth.checkRejection(card, onSuccess, onFail);
-          // check if this card is valid or not
-        }
-      }); // if card is still unfamiliar after looking for a familiar one
-      if (strangerDanger) {
-        onFail();
-      }
-    };
-  },
-};
 
 const record = {
   // collection of methods that write to makerspace database
@@ -79,19 +45,20 @@ const record = {
 };
 
 const auth = {
-  orize: (cardID, onSuccess, onFail) => {
-    cache.check(cardID, onSuccess, async () => {
-      // Check in cache first its faster and up to date enough to be close to the source of truth
-      try {
+  orize: async (cardID, onSuccess, onFail) => {
+    try {
+      const card = await checkForCard(cardID);
+      if (card){
+        auth.checkRejection(card, onSuccess, onFail);
+      } else {
         const {db, closeDb} = await connectDB();
         // given no local entry or rejection maybe this is a new one or card is more up to date in db
         auth.mongoCardCheck(cardID, onSuccess, onFail, db, closeDb);
-      } catch (error){
-        // not in local cache could not connect to db
-        onFail('not in cache and failed to connect to db');
-        console.log(`${cardID} rejected due to amnesia: ${error}`);
       }
-    })(); // cache.check returns a function, and that needs to be executed()
+    } catch (error){
+      onFail('not in cache and failed to connect to db');
+      console.log(`${cardID} rejected due to amnesia => ${error}`);
+    }
   },
   mongoCardCheck: async (cardID, onSuccess, onFail, db, closeDb) => {
     try {
@@ -102,7 +69,7 @@ const auth = {
           // acceptance logic, this function cares about rejection
           record.reject(card, db, closeDb); // Rejections: we have to wait till saved to close db
         }
-        cache.updateCard(card);
+        updateCard(card);
         // keep local redundant data cache up to date
       } else {
         // no error, no card, this card is unregistered
@@ -151,7 +118,7 @@ const cronUpdate = async () => {
     while((card = await cursor.next())){
       if (card) {
         // update local cache to be in sync with source of truth
-        cache.updateCard(card);
+        updateCard(card);
       }
     }
     closeDb();
@@ -163,7 +130,8 @@ const cronUpdate = async () => {
 };
 
 // High level start up sequence
-cache.persist.init(); // set up local cache
+// set up local cache
+cacheSetup('./members/');
 serialInit({
   authorize: auth.orize,
   checkin: record.checkin,
