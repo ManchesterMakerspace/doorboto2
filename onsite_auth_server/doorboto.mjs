@@ -46,46 +46,34 @@ const checkin = (member, db, closeDb) => {
 
 const authorize = async (cardID, onSuccess, onFail) => {
   try {
-    const card = await checkForCard(cardID);
-    if (card){
-      checkRejection(card, onSuccess, onFail);
+    const cacheCard = await checkForCard(cardID);
+    if (cacheCard){
+      checkRejection(cacheCard, onSuccess, onFail);
     } else {
+      // given no cache entry or rejection maybe more up to date in db?
       const {db, closeDb} = await connectDB();
-      // given no local entry or rejection maybe this is a new one or card is more up to date in db
-      mongoCardCheck(cardID, onSuccess, onFail, db, closeDb);
+      const dbCard = await db.collection('cards').findOne({ uid: cardID });
+      if (dbCard){
+        // given we got a record back from database
+        if (checkRejection(dbCard, onSuccess, onFail)) {
+          // acceptance logic, this function cares about rejection
+          reject(dbCard, db, closeDb);
+        } else {
+          closeDb();
+        }
+        // keep local redundant data cache up to date
+        updateCard(dbCard);
+      } else {
+        // no error, no card, this card is unregistered
+        onFail('unregistered card');
+        // we want these to show up in the db to register new cards
+        reject({ uid: cardID }, db, closeDb);
+      }
     }
   } catch (error){
     onFail('not in cache and failed to connect to db');
     console.log(`${cardID} rejected due to amnesia => ${error}`);
   }
-}
-  
-const mongoCardCheck = async (cardID, onSuccess, onFail, db, closeDb) => {
-    try {
-      const card = await db.collection('cards').findOne({ uid: cardID });
-      if(card){
-        // given we got a record back from mongo
-        if (checkRejection(card, onSuccess, onFail)) {
-          // acceptance logic, this function cares about rejection
-          reject(card, db, closeDb); // Rejections: we have to wait till saved to close db
-        }
-        updateCard(card);
-        // keep local redundant data cache up to date
-      } else {
-        // no error, no card, this card is unregistered
-        onFail('unregistered card');
-        // we want these to show up somewhere to register new cards
-        reject({ uid: cardID }, db, closeDb);
-        // so lets put them in mongo
-      }
-    } catch (error){
-      console.log('mongo findOne error: ' + error);
-      // Log error to debug possible mongo problem
-      onFail(' not in cache, db error');
-      // Sends event and message to slack if connected
-    } finally {
-      closeDb();
-    }
 }
 
 const checkRejection = (card, onSuccess, onFail) => {
