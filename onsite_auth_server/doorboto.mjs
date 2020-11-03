@@ -7,40 +7,38 @@ const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // collection of methods that write to makerspace database
-const reject = (card, db, closeDb) => {
-  db.collection('rejections').insertOne(insertDoc({
-      uid: card.uid,
-      // should always have uid
-      holder: card.holder ? card.holder : null,
-      // we only get this when a recorded card holder is rejected
-      validity: card.validity ? card.validity : 'unregistered',
-      // important to know this is an unregistered card if info missing
-      timeOf: new Date(), // should be same as mongoose default
-    }),
-    error => {
-      if (error) {
-        console.log(error + ': Could not save reject -> ' + card.uid);
-      } // knowing who it was might be important
-      closeDb(); 
-      // error or not close connection to db after saving a rejection
-    }
-  );
+const reject = async (card, db, closeDb) => {
+  const {uid, holder, validity} = card;
+  const rejectDoc = {
+    uid,
+    // we only get holder when a recorded card holder is rejected
+    holder: holder ? holder : null,
+    // important to know this is an unregistered card if info missing
+    validity: validity ? validity : 'unregistered',
+    timeOf: new Date(), // should be same as mongoose default
+  };
+  try {
+    await db.collection('rejections').insertOne(insertDoc(rejectDoc));
+  } catch (error){
+    console.log(`${uid} rejected but not saved => ${error}`);
+  } finally {
+    closeDb();
+  }
 }
   
-const checkin = (member, db, closeDb) => {
+const checkin = async (member, db, closeDb) => {
   // keeps check in history for an active membership count
-  db.collection('checkins').insertOne(insertDoc({
-      name: member,
-      time: new Date().getTime(),
-    }),
-    error => {
-      if (error) {
-        console.log(error + '; could not save check in for -> ' + member);
-      }
-      closeDb();
-      // error or not close connection to db after check in
-    }
-  );
+  const checkinDoc = {
+    name: member,
+    time: new Date().getTime(),
+  };
+  try {
+    await db.collection('checkins').insertOne(insertDoc(checkinDoc));
+  } catch (error){
+    console.log(`${member} checkin save issue => ${error}`);
+  } finally {
+    closeDb();
+  }
 }
 
 
