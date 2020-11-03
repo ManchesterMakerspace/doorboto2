@@ -1,6 +1,6 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-import { connectDB, insertDoc } from './database_sync';
-import { serialInit } from './reader_com'
+import { connectDB, insertDoc } from './storage/database_sync';
+import { serialInit } from './outward_telemetry/reader_com'
 
 const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
