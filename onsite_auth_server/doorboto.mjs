@@ -1,7 +1,8 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
 import { connectDB, insertDoc } from './storage/database_sync.mjs';
-import { serialInit } from './outward_telemetry/reader_com.mjs';
 import { cacheSetup, updateCard, checkForCard } from './storage/on_site_cache.mjs';
+import { serialInit, acceptSignal, denySignal } from './hardware_interface/reader_com.mjs';
+import { slackSend } from './outward_telemetry/slack.mjs';
 
 const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
@@ -25,74 +26,86 @@ const reject = async (card, db, closeDb) => {
     closeDb();
   }
 }
-  
-const checkin = async (member, db, closeDb) => {
-  // keeps check in history for an active membership count
+
+// is called on successful authorization
+const grantAccess = async name => {
+  acceptSignal();
   const checkinDoc = {
-    name: member,
+    name,
     time: new Date().getTime(),
   };
   try {
+    const {db, closeDb} = await connectDB();
     await db.collection('checkins').insertOne(insertDoc(checkinDoc));
-  } catch (error){
-    console.log(`${member} checkin save issue => ${error}`);
-  } finally {
     closeDb();
+  } catch (error){
+    console.log(`${name} checkin save issue => ${error}`);
   }
+  slackSend(`${name} just checked in`);
+};
+
+// is called on failed authorization
+const denyAccess = (msg, member = null) => {
+  denySignal();
+  if (member) {
+    const atChannel = '<!channel> ';
+    const msgBlock = '```' + msg + '```';
+    const adminMsg = 
+      `${atChannel}${msgBlock} Maybe we missed renewing them or they need to be reached out to?`;
+    slackSend(adminMsg, process.env.MR_WEBHOOK);
+  }
+  slackSend(`denied access: ${msg}`);
 }
 
 
-const authorize = async (cardID, onSuccess, onFail) => {
+const authorize = async cardID => {
   try {
     const cacheCard = await checkForCard(cardID);
     if (cacheCard){
-      checkRejection(cacheCard, onSuccess, onFail);
-    } else {
-      // given no cache entry or rejection maybe more up to date in db?
+      checkRejection(cacheCard);
+    } else { // given no cache entry check db for one
       const {db, closeDb} = await connectDB();
       const dbCard = await db.collection('cards').findOne({ uid: cardID });
       if (dbCard){
         // given we got a record back from database
-        if (checkRejection(dbCard, onSuccess, onFail)) {
+        if (checkRejection(dbCard)) {
           // acceptance logic, this function cares about rejection
           reject(dbCard, db, closeDb);
         } else {
           closeDb();
         }
-        // keep local redundant data cache up to date
-        updateCard(dbCard);
-      } else {
-        // no error, no card, this card is unregistered
-        onFail('unregistered card');
+        updateCard(dbCard); // Bring cache up to date with db
+      } else { // no error, no card, this card is unregistered
+        denyAccess('unregistered card');
         // we want these to show up in the db to register new cards
         reject({ uid: cardID }, db, closeDb);
       }
     }
   } catch (error){
-    onFail('not in cache and failed to connect to db');
-    console.log(`${cardID} rejected due to amnesia => ${error}`);
+    const issue = `${cardID} rejected due to amnesia => ${error}`;
+    denyAccess(issue);
+    console.log(issue);
   }
 }
 
-const checkRejection = (card, onSuccess, onFail) => {
-  // When we have an actual record to check
+// Card associated information verification
+const checkRejection = card => {
+  const {validity, holder, expiry} = card;
   let rejected = true; // returns if card was reject if caller cares
-  if (card.validity === 'activeMember' || card.validity === 'nonMember') {
-    // make sure card has been marked with a valid state
-    if (new Date().getTime() < new Date(card.expiry).getTime() + LENIENCY) {
-      // make sure card is not expired
-      onSuccess(card.holder); // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
+  // make sure card has been marked with a valid state
+  if (validity === 'activeMember' || validity === 'nonMember') {
+    // make sure card is not expired
+    if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
+      // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
+      grantAccess(holder);
       rejected = false; // congrats you're not rejected
     } else {
-      onFail(card.holder + ' has expired', card.holder);
+      denyAccess(`${holder}'s membership as lapsed`, holder);
     } // given members time is up we want a polite message
   } else {
-    onFail(
-      card.holder + "'s " + card.validity + ' card was scanned',
-      card.holder
-    );
+    denyAccess(`${holder}'s  ${validity} card was scanned`, holder);
   } // context around rejections is helpful
-  return rejected; // would rather leave calling function to decide what to do
+  return rejected;
 }
 
 
@@ -119,8 +132,8 @@ const cronUpdate = async () => {
 // High level start up sequence
 // set up local cache
 cacheSetup('./members/');
-serialInit({
-  authorize,
-  checkin,
-}); // serial connect to arduino
-cronUpdate(); // run a time based stream that updates local cache
+// Start serial connection to Arduino
+// Pass it a callback to handle on data events
+serialInit(authorize);
+// Regular database check that updates local cache
+cronUpdate();
