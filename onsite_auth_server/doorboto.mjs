@@ -8,17 +8,13 @@ const HOUR = 3600000;       // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // is called on failed authorization
-const denyAccess = (msg, member = null) => {
-  denySignal();
-  if (member) {
-    const atChannel = '<!channel> ';
-    const msgBlock = '```' + msg + '```';
-    const adminMsg = 
-      `${atChannel}${msgBlock} Maybe we missed renewing them or they need to be reached out to?`;
-    slackSend(adminMsg, process.env.MR_WEBHOOK);
-  }
-  slackSend(`denied access: ${msg}`);
-}
+const adminAttention = (msg, member = 'doorboto admin') => {
+  console.log(msg);
+  const atChannel = '<!channel> ';
+  const msgBlock = '```' + msg + '```';
+  const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
+  slackSend(adminMsg, process.env.MR_WEBHOOK);
+};
 
 const authorize = async uid => {
   let mongo = null;
@@ -54,7 +50,9 @@ const authorize = async uid => {
     }
     if(!mongo){ mongo = await dbPromise; }
     if(denyMsg){
-      denyAccess(denyMsg, holder);
+      denySignal();
+      slackSend(`denied access: ${denyMsg}`);
+      if (holder) { adminAttention(denyMsg, holder); }
       cardData.timeOf = new Date();
       await mongo.db.collection('rejections').insertOne(insertDoc(cardData));
     } else {
@@ -66,9 +64,7 @@ const authorize = async uid => {
     }
     mongo.closeDb();
   } catch (error){
-    const issue = `${uid} rejected due to system error => ${error}`;
-    denyAccess(issue);
-    console.log(issue);
+    adminAttention(`${uid} rejected due to authorization error => ${error}`);
   }
 }
 
