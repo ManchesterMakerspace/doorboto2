@@ -1,1 +1,0 @@
-// member_records.mjs Copyright 2020 Manchester Makerspace MIT Licence

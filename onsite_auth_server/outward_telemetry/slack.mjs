@@ -33,7 +33,4 @@ const adminAttention = (msg, member = 'doorboto admin') => {
   slackSend(adminMsg, process.env.MR_WEBHOOK);
 };
 
-export {
-  slackSend,
-  adminAttention,
-}
+export { slackSend, adminAttention };
