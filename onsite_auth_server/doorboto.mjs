@@ -93,26 +93,6 @@ const authorize = async cardID => {
   }
 }
 
-// Card associated information verification
-const checkRejection = card => {
-  const {validity, holder, expiry} = card;
-  let rejected = true; // returns if card was reject if caller cares
-  // make sure card has been marked with a valid state
-  if (validity === 'activeMember' || validity === 'nonMember') {
-    // make sure card is not expired
-    if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
-      // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
-      grantAccess(holder);
-      rejected = false; // congrats you're not rejected
-    } else {
-      denyAccess(`${holder}'s membership as lapsed`, holder);
-    } // given members time is up we want a polite message
-  } else {
-    denyAccess(`${holder}'s  ${validity} card was scanned`, holder);
-  } // context around rejections is helpful
-  return rejected;
-}
-
 // runs a time based update operation
 const cronUpdate = async () => {
   try {
