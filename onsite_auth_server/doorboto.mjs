@@ -1,5 +1,5 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-import { connectDB, insertDoc } from './storage/database_sync.mjs';
+import { connectDB, insertDoc } from './storage/mongo.mjs';
 import {
   cacheSetup,
   updateCard,
