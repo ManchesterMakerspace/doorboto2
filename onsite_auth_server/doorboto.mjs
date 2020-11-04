@@ -2,19 +2,10 @@
 import { connectDB, insertDoc } from './storage/database_sync.mjs';
 import { cacheSetup, updateCard, checkForCard } from './storage/on_site_cache.mjs';
 import { serialInit, acceptSignal, denySignal } from './hardware_interface/reader_com.mjs';
-import { slackSend } from './outward_telemetry/slack.mjs';
+import { slackSend, adminAttention } from './outward_telemetry/slack.mjs';
 
 const HOUR = 3600000;       // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
-
-// is called on failed authorization
-const adminAttention = (msg, member = 'doorboto admin') => {
-  console.log(msg);
-  const atChannel = '<!channel> ';
-  const msgBlock = '```' + msg + '```';
-  const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
-  slackSend(adminMsg, process.env.MR_WEBHOOK);
-};
 
 const authorize = async uid => {
   let mongo = null;

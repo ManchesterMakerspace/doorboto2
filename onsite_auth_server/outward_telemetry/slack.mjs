@@ -25,6 +25,15 @@ const slackSend = (msg, path = process.env.DOORBOTO_WEBHOOK) => {
   });
 };
 
+const adminAttention = (msg, member = 'doorboto admin') => {
+  console.log(msg);
+  const atChannel = '<!channel> ';
+  const msgBlock = '```' + msg + '```';
+  const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
+  slackSend(adminMsg, process.env.MR_WEBHOOK);
+};
+
 export {
   slackSend,
+  adminAttention,
 }
