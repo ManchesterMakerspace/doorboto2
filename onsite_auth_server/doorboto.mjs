@@ -60,27 +60,32 @@ const denyAccess = (msg, member = null) => {
 
 const authorize = async cardID => {
   try {
-    const cacheCard = await checkForCard(cardID);
-    if (cacheCard){
-      checkRejection(cacheCard);
-    } else { // given no cache entry check db for one
+    let cardData = await checkForCard(cardID);
+    if (!cardData){ // given no cache entry check db for one
       const {db, closeDb} = await connectDB();
-      const dbCard = await db.collection('cards').findOne({ uid: cardID });
-      if (dbCard){
-        // given we got a record back from database
-        if (checkRejection(dbCard)) {
-          // acceptance logic, this function cares about rejection
-          reject(dbCard, db, closeDb);
-        } else {
-          closeDb();
-        }
-        updateCard(dbCard); // Bring cache up to date with db
-      } else { // no error, no card, this card is unregistered
+      const cardData = await db.collection('cards').findOne({ uid: cardID });
+      if(!cardData){  // no card here either, this card is unregistered
         denyAccess('unregistered card');
         // we want these to show up in the db to register new cards
         reject({ uid: cardID }, db, closeDb);
+        return;
       }
+      closeDb();
+      updateCard(cardData); // Bring cache up to date with db
     }
+    const {validity, holder, expiry} = cardData;
+    // make sure card has been marked with a valid state
+    if (validity === 'activeMember' || validity === 'nonMember') {
+      // make sure card is not expired
+      if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
+        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
+        grantAccess(holder);
+      } else {
+        denyAccess(`${holder}'s membership as lapsed`, holder);
+      } // given members time is up we want a polite message
+    } else {
+      denyAccess(`${holder}'s  ${validity} card was scanned`, holder);
+    } // context around rejections is helpful
   } catch (error){
     const issue = `${cardID} rejected due to amnesia => ${error}`;
     denyAccess(issue);
@@ -107,7 +112,6 @@ const checkRejection = card => {
   } // context around rejections is helpful
   return rejected;
 }
-
 
 // runs a time based update operation
 const cronUpdate = async () => {
