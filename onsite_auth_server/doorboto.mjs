@@ -47,7 +47,7 @@ const authorize = async uid => {
     let cardData = await checkForCard(uid);
     if (!cardData){ // given no cache entry check db for one
       mongo = await dbPromise;
-      const cardData = await mongo.db.collection('cards').findOne({ uid });
+      cardData = await mongo.db.collection('cards').findOne({ uid });
       if(!cardData){  // no card here either, this card is unregistered
         denyAccess('unregistered card');
         // we want these to show up in the db to register new cards
