@@ -27,23 +27,6 @@ const reject = async (card, db, closeDb) => {
   }
 }
 
-// is called on successful authorization
-const grantAccess = async name => {
-  acceptSignal();
-  const checkinDoc = {
-    name,
-    time: new Date().getTime(),
-  };
-  try {
-    const {db, closeDb} = await connectDB();
-    await db.collection('checkins').insertOne(insertDoc(checkinDoc));
-    closeDb();
-  } catch (error){
-    console.log(`${name} checkin save issue => ${error}`);
-  }
-  slackSend(`${name} just checked in`);
-};
-
 // is called on failed authorization
 const denyAccess = (msg, member = null) => {
   denySignal();
@@ -57,20 +40,20 @@ const denyAccess = (msg, member = null) => {
   slackSend(`denied access: ${msg}`);
 }
 
-
-const authorize = async cardID => {
+const authorize = async uid => {
+  let mongo = null;
   try {
-    let cardData = await checkForCard(cardID);
+    const dbPromise = connectDB();
+    let cardData = await checkForCard(uid);
     if (!cardData){ // given no cache entry check db for one
-      const {db, closeDb} = await connectDB();
-      const cardData = await db.collection('cards').findOne({ uid: cardID });
+      mongo = await dbPromise;
+      const cardData = await mongo.db.collection('cards').findOne({ uid });
       if(!cardData){  // no card here either, this card is unregistered
         denyAccess('unregistered card');
         // we want these to show up in the db to register new cards
-        reject({ uid: cardID }, db, closeDb);
+        reject({ uid }, mongo.db, mongo.closeDb);
         return;
       }
-      closeDb();
       updateCard(cardData); // Bring cache up to date with db
     }
     const {validity, holder, expiry} = cardData;
@@ -78,16 +61,24 @@ const authorize = async cardID => {
     if (validity === 'activeMember' || validity === 'nonMember') {
       // make sure card is not expired
       if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
-        // THIS IS WHERE WE LET PEOPLE IN! The one and only reason
-        grantAccess(holder);
+        acceptSignal(); // Trigger the door strike to open
+        slackSend(`${holder} just checked in`);
+        const checkinDoc = {
+          name: holder,
+          time: new Date().getTime(),
+        };
+        if(!mongo){ mongo = await dbPromise; }
+        await mongo.db.collection('checkins').insertOne(insertDoc(checkinDoc));
       } else {
         denyAccess(`${holder}'s membership as lapsed`, holder);
       } // given members time is up we want a polite message
     } else {
       denyAccess(`${holder}'s  ${validity} card was scanned`, holder);
     } // context around rejections is helpful
+    if(!mongo){ mongo = await dbPromise; }
+    mongo.closeDb();
   } catch (error){
-    const issue = `${cardID} rejected due to amnesia => ${error}`;
+    const issue = `${uid} rejected due to amnesia => ${error}`;
     denyAccess(issue);
     console.log(issue);
   }
