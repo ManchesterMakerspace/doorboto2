@@ -8,7 +8,7 @@ const HOUR = 3600000; // an hour in milliseconds
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // collection of methods that write to makerspace database
-const reject = async (card, db, closeDb) => {
+const reject = async (card, db) => {
   const {uid, holder, validity} = card;
   const rejectDoc = {
     uid,
@@ -22,8 +22,6 @@ const reject = async (card, db, closeDb) => {
     await db.collection('rejections').insertOne(insertDoc(rejectDoc));
   } catch (error){
     console.log(`${uid} rejected but not saved => ${error}`);
-  } finally {
-    closeDb();
   }
 }
 
@@ -51,13 +49,14 @@ const authorize = async uid => {
       if(!cardData){  // no card here either, this card is unregistered
         denyAccess('unregistered card');
         // we want these to show up in the db to register new cards
-        reject({ uid }, mongo.db, mongo.closeDb);
+        reject({ uid }, mongo.db);
         return;
       }
       updateCard(cardData); // Bring cache up to date with db
     }
     const {validity, holder, expiry} = cardData;
     // make sure card has been marked with a valid state
+    let denyMsg = null;
     if (validity === 'activeMember' || validity === 'nonMember') {
       // make sure card is not expired
       if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
@@ -69,12 +68,17 @@ const authorize = async uid => {
         };
         if(!mongo){ mongo = await dbPromise; }
         await mongo.db.collection('checkins').insertOne(insertDoc(checkinDoc));
-      } else {
-        denyAccess(`${holder}'s membership as lapsed`, holder);
-      } // given members time is up we want a polite message
-    } else {
-      denyAccess(`${holder}'s  ${validity} card was scanned`, holder);
-    } // context around rejections is helpful
+      } else { // Note that this denial was because of a lapsed membership
+        denyMsg = `${holder}'s membership as lapsed`;
+      }
+    } else { // Note this denial was a validity issue
+      denyMsg = `${holder}'s  ${validity} card was scanned`;
+    }
+    if(denyMsg){
+      denyAccess(denyMsg, holder);
+      if(!mongo){ mongo = await dbPromise; }
+      reject(cardData, mongo.db);
+    }
     if(!mongo){ mongo = await dbPromise; }
     mongo.closeDb();
   } catch (error){
