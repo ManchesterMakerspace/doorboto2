@@ -15,65 +15,92 @@ import { slackSend, adminAttention } from './outward_telemetry/slack.mjs';
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
-const authorize = async uid => {
-  let mongo = null;
-  try {
-    const dbPromise = connectDB(); // Continue while db connects
-    let cardData = await checkForCard(uid);
-    let denyMsg = null;
-    if (!cardData) {
-      // given no cache entry check db for one
-      mongo = await dbPromise;
-      cardData = await mongo.db.collection('cards').findOne({ uid });
-      if (cardData) {
-        // Bring cache up to date with db if a result exist
-        updateCard(cardData);
-      } else {
-        // Unregistered cards are recorded to register new cards
-        cardData = {
-          uid,
-          holder: null,
-          validity: 'unregistered',
-          expiry: 0,
-        };
-      }
-    }
-    const { validity, holder, expiry } = cardData;
-    // make sure card has been marked with a valid state and unexpired
-    if (validity === 'activeMember' || validity === 'nonMember') {
-      if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
-        acceptSignal(); // Trigger the door strike to open
-        slackSend(`${holder} just checked in`);
-      } else {
-        // Note that this denial was because of a lapsed membership
-        denyMsg = `${holder}'s membership as lapsed`;
-      }
+const checkStanding = cardData => {
+  // make sure card has been marked with a valid state and unexpired
+  const { validity, holder, expiry } = cardData;
+  const standing = {
+    good: false,
+    cardData: {...cardData},
+    msg: `${holder}'s  ${validity} card was scanned`,
+  };
+  if (validity === 'activeMember' || validity === 'nonMember') {
+    if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
+      acceptSignal(); // Trigger the door strike to open
+      standing.good = true;
+      standing.msg = `${holder} checked in`;
     } else {
-      // Note this denial was a validity issue
-      denyMsg = `${holder}'s  ${validity} card was scanned`;
+      standing.msg = `Denied access: ${holder}'s membership as lapsed`;
     }
-    if (!mongo) {
-      mongo = await dbPromise;
-    }
-    if (denyMsg) {
-      denySignal();
-      slackSend(`denied access: ${denyMsg}`);
-      if (holder) {
-        adminAttention(denyMsg, holder);
-      }
-      cardData.timeOf = new Date();
-      await mongo.db.collection('rejections').insertOne(insertDoc(cardData));
-    } else {
-      const checkinDoc = {
-        name: holder,
-        time: new Date().getTime(),
-      };
-      await mongo.db.collection('checkins').insertOne(insertDoc(checkinDoc));
-    }
-    mongo.closeDb();
-  } catch (error) {
-    adminAttention(`${uid} rejected due to authorization error => ${error}`);
   }
+  if(!standing.good){
+    denySignal();
+    if (standing.cardData.holder) {
+      adminAttention(standing.msg, standing.cardData.holder);
+    }
+    standing.cardData.timeOf = new Date();
+  }
+  return standing;
+}
+
+const makeRecordOfScanFunc = (db, closeDb) => {
+  return async (denied, cardData) => {
+    const collection = denied ? 'rejections' : 'checkins';
+    const data = denied ? cardData : {
+      name: cardData.holder,
+      time: new Date().getTime(),
+    };
+    try {
+      await db.collection(collection).insertOne(insertDoc(data));
+    } catch (error){
+      console.log(`scan record issue => ${error}`);
+    } finally {
+      closeDb()
+    }
+  }
+}
+
+// takes a card and returns an insert function
+const getCardFromDb = async uid => {
+  try {
+    const {db, closeDb} = await connectDB();
+    // default to unregistered card
+    let dbCardData = dbCardData = {
+      uid,
+      holder: null,
+      validity: 'unregistered',
+      expiry: 0,
+    };
+    dbCardData = await db.collection('cards').findOne({ uid });
+    if (dbCardData.holder) {
+      // Bring cache up to date with db if a result exist
+      updateCard(dbCardData);
+    }
+    return {
+      dbCardData,
+      recordScan: makeRecordOfScanFunc(db, closeDb),
+    } 
+  } catch (error){
+    console.log(`getCardFromDb => ${error}`);
+  }
+}
+
+const authorize = async uid => {
+  let standing = {
+    authorized: false,
+    cardData: null,
+    msg: '',
+  };
+  const cacheCardData = await checkForCard(uid);
+  if(cacheCardData){
+    standing = checkStanding(cacheCardData);
+  }
+  const {dbCardData, recordScan} = await getCardFromDb(uid);
+  if (!standing.cardData){
+    standing = checkStanding(dbCardData);
+  }
+  slackSend(standing.msg);
+  // record scan and cleanly close db
+  await recordScan(standing.good, standing.cardData);
 };
 
 // runs a time based update operation
@@ -104,3 +131,9 @@ cacheSetup('./members/');
 serialInit(authorize);
 // Regular database check that updates local cache
 cronUpdate();
+
+export {
+  authorize,
+  cronUpdate,
+  checkStanding,
+}

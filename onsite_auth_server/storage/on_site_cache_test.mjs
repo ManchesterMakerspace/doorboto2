@@ -2,28 +2,39 @@ import { cacheSetup, updateCard, checkForCard } from './on_site_cache.mjs';
 import fs from 'fs/promises';
 import oid from './oid.mjs';
 
-const createMockCard = () => {
+const randomMockCard = () => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
     expiry: new Date().getTime(),
-    validity: Math.round(Math.random()) ? 'good' : 'bad',
+    validity: Math.round(Math.random()) ? 'activeMember' : 'lostCard',
   };
 };
 
-const createCards = total => {
+const createCardArray = total => {
   const cards = [];
   for (let i = 0; i < total; i++) {
-    cards.push(createMockCard());
+    cards.push(randomMockCard());
   }
   return cards;
 }
 
+const createCards = async cards => {
+  try {
+    for (let i = 0; i < cards.length; i++) {
+      await updateCard(cards[i]);
+    }
+  } catch (error) {
+    console.log(`create issue => ${error}`);
+  }
+}
+
 // load some cards see if they can be read
 // clean up the mess afterwards
-const runCacheTest = async (cards) => {
+const runCacheTest = async () => {
   const TEST_PATH = './test/';
   console.log(`running onsite cache test in ${TEST_PATH}`);
+  const cards = createCardArray(1);
   try {
     await cacheSetup(TEST_PATH);
     const stats = await fs.stat(TEST_PATH);
@@ -36,9 +47,7 @@ const runCacheTest = async (cards) => {
     } else {
       throw new Error(`cache setup is not a thing`);
     }
-    for (let i = 0; i < cards.length; i++) {
-      await updateCard(cards[i]);
-    }
+    await createCards(cards);
     let foundCard = await checkForCard(cards[0].uid);
     if (foundCard) {
       console.log(`found loaded card ${JSON.stringify(foundCard)}`);
@@ -60,9 +69,10 @@ const runCacheTest = async (cards) => {
   }
 };
 
-runCacheTest(createCards(1));
+// runCacheTest(createCardArray(1));
 
 export {
-  createMockCard,
+  createCardArray,
   createCards,
+  runCacheTest,
 }
