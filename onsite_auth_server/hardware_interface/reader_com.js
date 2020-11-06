@@ -42,11 +42,8 @@ const serialInit = onData => {
   port.on('error', reconnect());
 };
 
-const denySignal = () => {
-  port.write('<d>');
-};
-const acceptSignal = () => {
-  port.write('<a>');
-};
+const giveAccess = authorized => {
+  port.write(authorized ? '<a>' : '<d>');
+}
 
-module.exports = { serialInit, denySignal, acceptSignal };
+module.exports = { serialInit, giveAccess };

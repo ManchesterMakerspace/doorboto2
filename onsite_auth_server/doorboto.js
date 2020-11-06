@@ -1,5 +1,5 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-const { connectDB, insertDoc } = require('./storage/mongo.js');
+const { connectDB, getCardFromDb } = require('./storage/mongo.js');
 const {
   cacheSetup,
   updateCard,
@@ -7,8 +7,7 @@ const {
 } = require('./storage/on_site_cache.js');
 const {
   serialInit,
-  acceptSignal,
-  denySignal,
+  giveAccess,
 } = require('./hardware_interface/reader_com.js');
 const { slackSend, adminAttention } = require('./outward_telemetry/slack.js');
 
@@ -25,7 +24,7 @@ const checkStanding = cardData => {
   };
   if (validity === 'activeMember' || validity === 'nonMember') {
     if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
-      acceptSignal(); // Trigger the door strike to open
+      giveAccess(true); // Trigger the door strike to open
       standing.good = true;
       standing.msg = `${holder} checked in`;
     } else {
@@ -33,52 +32,13 @@ const checkStanding = cardData => {
     }
   }
   if(!standing.good){
-    denySignal();
+    giveAccess(false);
     if (standing.cardData.holder) {
       adminAttention(standing.msg, standing.cardData.holder);
     }
     standing.cardData.timeOf = new Date();
   }
   return standing;
-}
-
-// Hold db and closeDb in closure to use after standing check
-const makeRecordOfScanFunc = (db, closeDb) => {
-  return async (denied, cardData) => {
-    const collection = denied ? 'rejections' : 'checkins';
-    const data = denied ? cardData : {
-      name: cardData.holder,
-      time: new Date().getTime(),
-    };
-    await db.collection(collection).insertOne(insertDoc(data));
-    closeDb()
-  }
-}
-
-// takes a card and returns an insert function
-const getCardFromDb = async uid => {
-  const {db, closeDb} = await connectDB();
-  // default to unregistered card
-  let dbCardData = {
-    uid,
-    holder: null,
-    validity: 'unregistered',
-    expiry: 0,
-  };
-  const result = {
-    dbCardData,
-    recordScan: async () => {},
-  }
-  if(!db){
-    return result;
-  }
-  result.dbCardData = await db.collection('cards').findOne({ uid });
-  if (result.dbCardData.holder) {
-    // Bring cache up to date with db if a result exist
-    updateCard(result.dbCardData);
-  }
-  result.recordScan = makeRecordOfScanFunc(db, closeDb);
-  return result;
 }
 
 const authorize = async uid => {
@@ -99,8 +59,11 @@ const authorize = async uid => {
       adminAttention(`Cache empty and db unavailable to check ${uid}`);
     } 
   }
+  if(dbCardData?.holder){
+    updateCard(dbCardData);
+  }
   slackSend(standing.msg);
-  // record scan and cleanly close db
+  // record this card scan reject or checkin and cleanly close db
   await recordScan(standing.good, standing.cardData);
 };
 

@@ -34,4 +34,43 @@ const insertDoc = doc => {
   };
 };
 
-module.exports = { connectDB, insertDoc };
+// Hold db and closeDb in closure to use after standing check
+const makeRecordOfScanFunc = (db, closeDb) => {
+  return async (denied, cardData) => {
+    const collection = denied ? 'rejections' : 'checkins';
+    const data = denied ? cardData : {
+      name: cardData.holder,
+      time: new Date().getTime(),
+    };
+    await db.collection(collection).insertOne(insertDoc(data));
+    closeDb()
+  }
+}
+
+// takes a card and returns an insert function
+const getCardFromDb = async uid => {
+  const {db, closeDb} = await connectDB();
+  // default to unregistered card
+  let dbCardData = {
+    uid,
+    holder: null,
+    validity: 'unregistered',
+    expiry: 0,
+  };
+  const result = {
+    dbCardData,
+    recordScan: async () => {},
+  }
+  if(!db){
+    return result;
+  }
+  result.dbCardData = await db.collection('cards').findOne({ uid });
+  result.recordScan = makeRecordOfScanFunc(db, closeDb);
+  return result;
+}
+
+module.exports = { 
+  connectDB,
+  insertDoc,
+  getCardFromDb,
+};
