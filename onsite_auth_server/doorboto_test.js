@@ -5,7 +5,7 @@ const { cacheSetup } = require( './storage/on_site_cache.js');
 const fs = require( 'fs/promises');
 
 const authorizeTest = async () =>{
-  const TEST_PATH = './test/';
+  const TEST_PATH = `${__dirname}/test_storage/`;
   console.log(`running authorize test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -18,7 +18,7 @@ const authorizeTest = async () =>{
   } catch (error){
     console.log(`Authorize test issue => ${error}`);
   } finally {
-    fs.rmdir(TEST_PATH, { recursive: true });
+    await fs.rmdir(TEST_PATH, { recursive: true });
     // Recursive option to be deprecated? No promise/async fs.rm? Confusing
   }
 }

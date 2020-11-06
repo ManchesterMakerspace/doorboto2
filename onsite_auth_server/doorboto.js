@@ -124,16 +124,24 @@ const cronUpdate = async () => {
 };
 
 // High level start up sequence
-// set up local cache
-cacheSetup('./members/');
-// Start serial connection to Arduino
-// Pass it a callback to handle on data events
-serialInit(authorize);
-// Regular database check that updates local cache
-cronUpdate();
+const run = () => {
+  // set up local cache
+  cacheSetup('./members/');
+  // Start serial connection to Arduino
+  // Pass it a callback to handle on data events
+  serialInit(authorize);
+  // Regular database check that updates local cache
+  cronUpdate();
+};
+
+// Run doorboto if not being called by test or other applications
+if(!module.parent){
+  run();
+}
 
 module.exports = {
   authorize,
   cronUpdate,
   checkStanding,
+  run,
 }

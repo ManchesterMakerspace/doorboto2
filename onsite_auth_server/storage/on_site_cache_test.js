@@ -32,7 +32,7 @@ const createCards = async cards => {
 // load some cards see if they can be read
 // clean up the mess afterwards
 const runCacheTest = async () => {
-  const TEST_PATH = `${__dirname}/test/`;
+  const TEST_PATH = `${__dirname}/test_storage/`;
   console.log(`running onsite cache test in ${TEST_PATH}`);
   const cards = createCardArray(1);
   try {
@@ -64,7 +64,7 @@ const runCacheTest = async () => {
   } catch (error) {
     console.log(`Cache Issue => ${error}`);
   } finally {
-    fs.rmdir(TEST_PATH, { recursive: true });
+    await fs.rmdir(TEST_PATH, { recursive: true });
     // Recursive option to be deprecated? No promise/async fs.rm? Confusing
   }
 };
