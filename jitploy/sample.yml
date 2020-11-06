@@ -1,8 +1,0 @@
-# Add properties to this module in order set configuration for sample environment
-{
-    JITPLOY_SHARED_KEY: 'Ar1A4pTQ1kdfSIieOJ1fGg==fnpRTG4k/rEryNPr8WCaLQ==', # Shared key for remote target enviroment, encrypts this file if not demo
-    MONGO_URI: 'localhost:27017',                                           # URI to MongoDB server
-    CHANNEL: 'doorboto',                                                    # Channel to post to when using slack
-    SLACK_WEBHOOK_URL: '',                                                  # URI one can get from slack to post as a robot
-    ARDUINO_PORT: '/dev/ttyAMC0'                                            # Port to communicate with arduino
-}
