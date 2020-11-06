@@ -41,7 +41,7 @@ void loop() {
     }
   } else {rightPressed = false;} // wait until button is done being pressed before actuating event again
 
-  char* response = recieve();
+  char* response = receive();
   if(strcmp(response, "a") == 0){            // a is for acceptance
     longBlink();                           // give a solid blink
   } else if (strcmp(response, "d") == 0){  // d is for denial
@@ -72,7 +72,7 @@ void rapidBlink(){
   if(times <= BLINK_AMOUNT){
     digitalWrite(LED_BUILTIN, state);
     timer.setTimeout(rapidBlink, 100);
-  } else { // reset to intial case to start over again
+  } else { // reset to initial case to start over again
     state = true;
     times = 0;
     turnOffLed();
@@ -84,7 +84,7 @@ void rapidBlink(){
 #define END_MARKER '>'
 #define BUFFER_SIZE 12
 
-char* recieve(){
+char* receive(){
   static char buffer[BUFFER_SIZE];   // static buffer to point to
   static boolean inProgress = false; // note if read started
   static byte index = 0;             // note what is being read
@@ -104,7 +104,7 @@ char* recieve(){
       }
     } else if(readChar == START_MARKER){inProgress = true;} // indicate when to read when start marker is seen
   }
-  return 0; // in the case the message has yet to be recieved
+  return 0; // in the case the message has yet to be received
 }
 
 // checks for a debounced button press event // TODO needs to be modified to handle more than one button
@@ -114,7 +114,7 @@ byte rightPressEvent() {     // remove default value to use in main sketch
                                           // low is a press with the pullup
   if(digitalRead(RIGHTBUTTON) == LOW){    // if the button has been pressed
     if(timingState) {                     // given timer has started
-      if(millis() - pressTime > BOUNCETIME){ // check if bounce time has elapesed
+      if(millis() - pressTime > BOUNCETIME){ // check if bounce time has elapsed
         if(millis() - pressTime > HOLDSTATE){// case button held longer return state 2
           return 2;                       // return hold state
         }
@@ -136,7 +136,7 @@ byte leftPressEvent() {     // remove default value to use in main sketch
                                           // low is a press with the pullup
   if(digitalRead(LEFTBUTTON) == LOW){    // if the button has been pressed
     if(timingState) {                     // given timer has started
-      if(millis() - pressTime > BOUNCETIME){ // check if bounce time has elapesed
+      if(millis() - pressTime > BOUNCETIME){ // check if bounce time has elapsed
         if(millis() - pressTime > HOLDSTATE){// case button held longer return state 2
           return 2;                       // return hold state
         }
