@@ -32,7 +32,7 @@ const createCards = async cards => {
 // load some cards see if they can be read
 // clean up the mess afterwards
 const runCacheTest = async () => {
-  const TEST_PATH = './test/';
+  const TEST_PATH = `${__dirname}/test/`;
   console.log(`running onsite cache test in ${TEST_PATH}`);
   const cards = createCardArray(1);
   try {

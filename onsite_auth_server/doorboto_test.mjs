@@ -9,17 +9,18 @@ const authorizeTest = async () =>{
   console.log(`running authorize test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
-    const cards = createCardArray(2);
-    await createCards(cards);
-    for (let i = 0; i < cards.length; i++) {
-      await authorize(cards[i].uid);
-    }
+    // const cards = createCardArray(2);
+    // await createCards(cards);
+    // for (let i = 0; i < cards.length; i++) {
+    //   await authorize(cards[i].uid);
+    // }
     await authorize('erm');
   } catch (error){
     console.log(`Authorize test issue => ${error}`);
+  } finally {
+    fs.rmdir(TEST_PATH, { recursive: true });
+    // Recursive option to be deprecated? No promise/async fs.rm? Confusing
   }
-  fs.rmdir(TEST_PATH, { recursive: true });
-  // Recursive option to be deprecated? No promise/async fs.rm? Confusing
 }
 
 export {

@@ -12,10 +12,16 @@ const run_them_all = async () => {
 }
 
 // run_them_all();
-authorizeTest()
-  .then(()=> {
-    process.exit(0);
-  });
+
+// runCacheTest()
+//   .then(()=> {
+//     process.exit(0);
+//   }); 
+// authorizeTest()
+//   .then(()=> {
+//     process.exit(0);
+//   });
+console.log(`${process.cwd()}`)
 
 export {
   run_them_all,
