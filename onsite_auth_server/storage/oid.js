@@ -18,4 +18,4 @@ const oid = () => {
   );
 };
 
-export default oid;
+module.exports = oid;

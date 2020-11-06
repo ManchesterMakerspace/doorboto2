@@ -1,5 +1,5 @@
 // slack.mjs Copyright 2020 Manchester Makerspace Licence MIT
-import { request } from 'https';
+const { request } = require('https');
 
 const slackSend = (msg, path = process.env.DOORBOTO_WEBHOOK) => {
   return new Promise((resolve, reject) => {
@@ -33,4 +33,4 @@ const adminAttention = (msg, member = 'doorboto admin') => {
   slackSend(adminMsg, process.env.MR_WEBHOOK);
 };
 
-export { slackSend, adminAttention };
+module.exports = { slackSend, adminAttention };

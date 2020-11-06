@@ -1,5 +1,5 @@
 // reader_com Copyright 2020 Manchester Makerspace MIT Licence
-import SerialPort from 'serialport';
+const SerialPort = require('serialport');
 const { Readline } = SerialPort;
 // on yun DO NOT NPM INSTALL -> opkg install node-serialport,
 // use global lib instead, actually new library probably no good
@@ -49,4 +49,4 @@ const acceptSignal = () => {
   port.write('<a>');
 };
 
-export { serialInit, denySignal, acceptSignal };
+module.exports = { serialInit, denySignal, acceptSignal };

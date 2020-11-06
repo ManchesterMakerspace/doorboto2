@@ -1,6 +1,6 @@
-import { cacheSetup, updateCard, checkForCard } from './on_site_cache.mjs';
-import fs from 'fs/promises';
-import oid from './oid.mjs';
+const { cacheSetup, updateCard, checkForCard } = require( './on_site_cache.js');
+const fs = require( 'fs/promises');
+const oid = require( './oid.js');
 
 const randomMockCard = () => {
   return {
@@ -71,7 +71,7 @@ const runCacheTest = async () => {
 
 // runCacheTest(createCardArray(1));
 
-export {
+module.exports = {
   createCardArray,
   createCards,
   runCacheTest,

@@ -1,6 +1,5 @@
 // database_sync.mjs Copyright 2020 Manchester Makerspace Licence MIT
-import mongodb from 'mongodb';
-const { MongoClient, ObjectID } = mongodb;
+const { MongoClient, ObjectID } = require('mongodb');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME;
@@ -31,4 +30,4 @@ const insertDoc = doc => {
   };
 };
 
-export { connectDB, insertDoc };
+module.exports = { connectDB, insertDoc };

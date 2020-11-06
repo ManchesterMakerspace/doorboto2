@@ -1,8 +1,8 @@
 // doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
-import { authorize } from './doorboto.mjs';
-import { createCardArray, createCards } from './storage/on_site_cache_test.mjs';
-import { cacheSetup } from './storage/on_site_cache.mjs';
-import fs from 'fs/promises';
+const { authorize } = require( './doorboto.js');
+// const { createCardArray, createCards } = require( './storage/on_site_cache_test.js');
+const { cacheSetup } = require( './storage/on_site_cache.js');
+const fs = require( 'fs/promises');
 
 const authorizeTest = async () =>{
   const TEST_PATH = './test/';
@@ -23,6 +23,6 @@ const authorizeTest = async () =>{
   }
 }
 
-export {
+module.exports = {
   authorizeTest,
 };

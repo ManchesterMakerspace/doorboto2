@@ -1,6 +1,6 @@
 // all_the_test.mjs Copyright 2020 Manchester Makerspace MIT License
-import { runCacheTest } from './storage/on_site_cache_test.mjs';
-import { authorizeTest } from './doorboto_test.mjs';
+const { runCacheTest } = require('./storage/on_site_cache_test.js');
+const { authorizeTest } = require('./doorboto_test.js');
 
 const run_them_all = async () => {
   try {
@@ -23,6 +23,6 @@ const run_them_all = async () => {
 //   });
 console.log(`${process.cwd()}`)
 
-export {
+module.exports = {
   run_them_all,
 }

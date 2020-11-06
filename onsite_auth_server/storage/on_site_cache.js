@@ -1,6 +1,6 @@
 // on_site_cache.mjs Copyright 2020 Manchester Makerspace MIT Licence
 // local cache logic for power, database, or network failure events
-import storage from 'node-persist';
+const storage = require('node-persist');
 
 const cacheSetup = async dir => {
   try {
@@ -40,4 +40,4 @@ const checkForCard = async cardUid => {
   }
 };
 
-export { cacheSetup, updateCard, checkForCard };
+module.exports = { cacheSetup, updateCard, checkForCard };

@@ -1,16 +1,16 @@
 // doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
-import { connectDB, insertDoc } from './storage/mongo.mjs';
-import {
+const { connectDB, insertDoc } = require('./storage/mongo.js');
+const {
   cacheSetup,
   updateCard,
   checkForCard,
-} from './storage/on_site_cache.mjs';
-import {
+} = require('./storage/on_site_cache.js');
+const {
   serialInit,
   acceptSignal,
   denySignal,
-} from './hardware_interface/reader_com.mjs';
-import { slackSend, adminAttention } from './outward_telemetry/slack.mjs';
+} = require('./hardware_interface/reader_com.js');
+const { slackSend, adminAttention } = require('./outward_telemetry/slack.js');
 
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
@@ -132,7 +132,7 @@ serialInit(authorize);
 // Regular database check that updates local cache
 cronUpdate();
 
-export {
+module.exports = {
   authorize,
   cronUpdate,
   checkStanding,
