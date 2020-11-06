@@ -1,21 +1,33 @@
 // all_the_test.mjs Copyright 2020 Manchester Makerspace MIT License
 const { runCacheTest } = require('./storage/on_site_cache_test.js');
-const { authorizeTest } = require('./doorboto_test.js');
+const { noValidDbTest } = require('./doorboto_test.js');
 
-const run_them_all = async () => {
+const runThemAll = async () => {
   try {
     await runCacheTest();
-    await authorizeTest();
+    await noValidDbTest();
     process.exit(0);
   } catch (error){
-    console.log(`Complete test issue => ${error}`);
+    console.log(`runThemAll => ${error}`);
+  }
+}
+
+const runOne = async () => {
+  try {
+    // await runCacheTest();
+    await noValidDbTest();
+    process.exit(0);
+  } catch (error){
+    console.log(`runOne => ${error}`);
   }
 }
 
 if(!module.parent){
-  run_them_all();
+  // runOne();
+  runThemAll();
 }
 
 module.exports = {
-  run_them_all,
+  runThemAll,
+  runOne,
 }

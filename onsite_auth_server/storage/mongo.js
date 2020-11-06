@@ -9,17 +9,21 @@ const DB_OPTIONS = {
 
 const connectDB = async () => {
   const client = new MongoClient(MONGODB_URI, DB_OPTIONS);
+  const returnObj = {
+    db: null,
+    closeDb: null,
+  }
   try {
     if (!MONGODB_URI || !DB_NAME) {
-      throw new Error(`missing db env vars`);
+      return returnObj;
     }
     await client.connect();
-    return {
-      db: client.db(DB_NAME),
-      closeDb: client.close,
-    };
+    returnObj.db = client.db(DB_NAME);
+    returnObj.closeDb = client.close;
+    return returnObj;
   } catch (error) {
     console.log(`connectDb => ${error}`);
+    return returnObj;
   }
 };
 

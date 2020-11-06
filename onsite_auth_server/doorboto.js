@@ -21,7 +21,7 @@ const checkStanding = cardData => {
   const standing = {
     good: false,
     cardData: {...cardData},
-    msg: `${holder}'s  ${validity} card was scanned`,
+    msg: `${holder}'s ${validity} card was scanned`,
   };
   if (validity === 'activeMember' || validity === 'nonMember') {
     if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
@@ -42,6 +42,7 @@ const checkStanding = cardData => {
   return standing;
 }
 
+// Hold db and closeDb in closure to use after standing check
 const makeRecordOfScanFunc = (db, closeDb) => {
   return async (denied, cardData) => {
     const collection = denied ? 'rejections' : 'checkins';
@@ -49,39 +50,35 @@ const makeRecordOfScanFunc = (db, closeDb) => {
       name: cardData.holder,
       time: new Date().getTime(),
     };
-    try {
-      await db.collection(collection).insertOne(insertDoc(data));
-    } catch (error){
-      console.log(`scan record issue => ${error}`);
-    } finally {
-      closeDb()
-    }
+    await db.collection(collection).insertOne(insertDoc(data));
+    closeDb()
   }
 }
 
 // takes a card and returns an insert function
 const getCardFromDb = async uid => {
-  try {
-    const {db, closeDb} = await connectDB();
-    // default to unregistered card
-    let dbCardData = dbCardData = {
-      uid,
-      holder: null,
-      validity: 'unregistered',
-      expiry: 0,
-    };
-    dbCardData = await db.collection('cards').findOne({ uid });
-    if (dbCardData.holder) {
-      // Bring cache up to date with db if a result exist
-      updateCard(dbCardData);
-    }
-    return {
-      dbCardData,
-      recordScan: makeRecordOfScanFunc(db, closeDb),
-    } 
-  } catch (error){
-    console.log(`getCardFromDb => ${error}`);
+  const {db, closeDb} = await connectDB();
+  // default to unregistered card
+  let dbCardData = {
+    uid,
+    holder: null,
+    validity: 'unregistered',
+    expiry: 0,
+  };
+  const result = {
+    dbCardData,
+    recordScan: async () => {},
   }
+  if(!db){
+    return result;
+  }
+  result.dbCardData = await db.collection('cards').findOne({ uid });
+  if (result.dbCardData.holder) {
+    // Bring cache up to date with db if a result exist
+    updateCard(result.dbCardData);
+  }
+  result.recordScan = makeRecordOfScanFunc(db, closeDb);
+  return result;
 }
 
 const authorize = async uid => {
@@ -96,7 +93,11 @@ const authorize = async uid => {
   }
   const {dbCardData, recordScan} = await getCardFromDb(uid);
   if (!standing.cardData){
-    standing = checkStanding(dbCardData);
+    if(dbCardData){
+      standing = checkStanding(dbCardData);
+    } else {
+      adminAttention(`Cache empty and db unavailable to check ${uid}`);
+    } 
   }
   slackSend(standing.msg);
   // record scan and cleanly close db
@@ -125,10 +126,8 @@ const cronUpdate = async () => {
 
 // High level start up sequence
 const run = () => {
-  // set up local cache
   cacheSetup('./members/');
-  // Start serial connection to Arduino
-  // Pass it a callback to handle on data events
+  // Pass arduino connection function a callback to handle on data events
   serialInit(authorize);
   // Regular database check that updates local cache
   cronUpdate();

@@ -1,8 +1,13 @@
 // slack.mjs Copyright 2020 Manchester Makerspace Licence MIT
 const { request } = require('https');
+const DEFAULT_WEBHOOK = process.env.DOORBOTO_WEBHOOK || ''
 
-const slackSend = (msg, path = process.env.DOORBOTO_WEBHOOK) => {
-  return new Promise((resolve, reject) => {
+const slackSend = (msg, path = DEFAULT_WEBHOOK) => {
+  return new Promise((resolve) => {
+    if(!path){
+      console.log(msg);
+      return;
+    }
     const postData = JSON.stringify({ text: msg });
     const options = {
       hostname: 'hooks.slack.com',
@@ -16,17 +21,12 @@ const slackSend = (msg, path = process.env.DOORBOTO_WEBHOOK) => {
     };
     const req = request(options, resolve);
     // just do it, no need for response
-    req.on('error', error => {
-      console.log(`slackSend Request issue: ${error}`);
-      reject();
-    });
     req.write(postData);
     req.end();
   });
 };
 
 const adminAttention = (msg, member = 'doorboto admin') => {
-  console.log(msg);
   const atChannel = '<!channel> ';
   const msgBlock = '```' + msg + '```';
   const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
