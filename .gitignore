@@ -8,3 +8,4 @@ members.txt
 .node-persist
 jitploy/decrypted_*
 .vscode
+personal.sh
