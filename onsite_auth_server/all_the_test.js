@@ -1,6 +1,7 @@
 // all_the_test.mjs Copyright 2020 Manchester Makerspace MIT License
 const { runCacheTest } = require('./storage/on_site_cache_test.js');
 const { noValidDbTest } = require('./doorboto_test.js');
+const { canMakeRecord } = require('./storage/mongo_test.js');
 
 const runThemAll = async () => {
   try {
@@ -15,7 +16,8 @@ const runThemAll = async () => {
 const runOne = async () => {
   try {
     // await runCacheTest();
-    await noValidDbTest();
+    // await noValidDbTest();
+    // await canMakeRecord();
     process.exit(0);
   } catch (error){
     console.log(`runOne => ${error}`);
@@ -23,8 +25,8 @@ const runOne = async () => {
 }
 
 if(!module.parent){
-  // runOne();
-  runThemAll();
+  runOne();
+  // runThemAll();
 }
 
 module.exports = {

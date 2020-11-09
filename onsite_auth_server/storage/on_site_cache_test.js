@@ -11,6 +11,24 @@ const randomMockCard = () => {
   };
 };
 
+const acceptedCard = () => {
+  return {
+    uid: oid(),
+    holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
+    expiry: new Date().getTime(),
+    validity: 'activeMember',
+  }
+}
+
+const rejectedCard = () => {
+  return {
+    uid: oid(),
+    holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
+    expiry: new Date().getTime(),
+    validity: 'lostCard',
+  }
+}
+
 const createCardArray = total => {
   const cards = [];
   for (let i = 0; i < total; i++) {
@@ -75,4 +93,6 @@ module.exports = {
   createCardArray,
   createCards,
   runCacheTest,
+  acceptedCard,
+  rejectedCard,
 }

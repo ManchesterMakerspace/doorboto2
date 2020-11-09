@@ -70,7 +70,7 @@ const authorize = async uid => {
 // runs a time based update operation
 const cronUpdate = async () => {
   try {
-    const { db, closeDb } = await connectDB();
+    const { db, client } = await connectDB();
     const cursor = db.collection('cards').find({});
     let card;
     while ((card = await cursor.next())) {
@@ -79,7 +79,7 @@ const cronUpdate = async () => {
         updateCard(card);
       }
     }
-    closeDb();
+    client.close();
   } catch (error) {
     console.log(`Issue connecting on update: ${error}`);
   }

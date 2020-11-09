@@ -13,13 +13,14 @@ const connectDB = async () => {
     db: null,
     closeDb: null,
   }
-  try {
-    if (!MONGODB_URI || !DB_NAME) {
-      return returnObj;
-    }
+  if (!MONGODB_URI || !DB_NAME) {
+    console.log(`Invalid env: ${DB_NAME} @ ${MONGODB_URI}`);
+    return returnObj;
+  }
+  try { 
     await client.connect();
     returnObj.db = client.db(DB_NAME);
-    returnObj.closeDb = client.close;
+    returnObj.client = client;
     return returnObj;
   } catch (error) {
     console.log(`connectDb => ${error}`);
@@ -35,7 +36,7 @@ const insertDoc = doc => {
 };
 
 // Hold db and closeDb in closure to use after standing check
-const makeRecordOfScanFunc = (db, closeDb) => {
+const makeRecordOfScanFunc = (db, client) => {
   return async (denied, cardData) => {
     const collection = denied ? 'rejections' : 'checkins';
     const data = denied ? cardData : {
@@ -43,13 +44,13 @@ const makeRecordOfScanFunc = (db, closeDb) => {
       time: new Date().getTime(),
     };
     await db.collection(collection).insertOne(insertDoc(data));
-    closeDb()
+    client.close();
   }
 }
 
 // takes a card and returns an insert function
 const getCardFromDb = async uid => {
-  const {db, closeDb} = await connectDB();
+  const {db, client} = await connectDB();
   // default to unregistered card
   let dbCardData = {
     uid,
@@ -65,7 +66,7 @@ const getCardFromDb = async uid => {
     return result;
   }
   result.dbCardData = await db.collection('cards').findOne({ uid });
-  result.recordScan = makeRecordOfScanFunc(db, closeDb);
+  result.recordScan = makeRecordOfScanFunc(db, client);
   return result;
 }
 
@@ -73,4 +74,5 @@ module.exports = {
   connectDB,
   insertDoc,
   getCardFromDb,
+  makeRecordOfScanFunc,
 };

@@ -4,7 +4,7 @@
   "description": "This is a server for an access control system",
   "main": "doorboto2.js",
   "scripts": {
-    "test": "node all_the_test.js",
+    "test": "./test_env.sh",
     "manual-test": "nodemon doorboto.js",
     "start-prod": "pm2 start start.sh --name=doorboto",
     "postversion": "git push"
