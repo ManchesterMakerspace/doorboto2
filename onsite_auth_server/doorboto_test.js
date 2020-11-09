@@ -1,12 +1,14 @@
 // doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
-const { authorize } = require( './doorboto.js');
+const { authorize, cronUpdate } = require( './doorboto.js');
 const { createCardArray, createCards } = require( './storage/on_site_cache_test.js');
 const { cacheSetup } = require( './storage/on_site_cache.js');
 const fs = require( 'fs/promises');
+const { connectDB, insertDoc } = require('./storage/mongo.js');
+
+const TEST_PATH = `${__dirname}/test_storage/`;
 
 // Members should be able to authorize solely on cache
 const noValidDbTest = async () =>{
-  const TEST_PATH = `${__dirname}/test_storage/`;
   console.log(`running no valid db test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -24,6 +26,24 @@ const noValidDbTest = async () =>{
   }
 }
 
+// integration test with backup of members collection
+const canUpdateCacheOfMembers = async () => {
+  try {
+    await cacheSetup(TEST_PATH);
+    const cards = createCardArray(2);
+    const {db, client} = await connectDB();
+    for (let i = 0; i < cards.length; i++) {
+      await db.collection('cards').insertOne(insertDoc(cards[i]));
+    }
+    client.close();
+    await cronUpdate();
+    // Process.exit needs to be called because other wise it'll wait to do its next update
+  } catch (error){
+    console.log(`canUpdateCacheOfMembers => ${error}`);
+  }
+}
+
 module.exports = {
   noValidDbTest,
+  canUpdateCacheOfMembers,
 };

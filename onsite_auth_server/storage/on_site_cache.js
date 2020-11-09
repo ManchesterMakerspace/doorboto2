@@ -4,7 +4,7 @@ const storage = require('node-persist');
 
 const cacheSetup = async dir => {
   try {
-    await storage.init({ dir });
+    return await storage.init({ dir });
   } catch (error) {
     console.log(`cacheSetup issue: ${error}`);
   }
@@ -12,6 +12,8 @@ const cacheSetup = async dir => {
 
 // Takes a card object and sets it to local storage
 const updateCard = async ({ holder, expiry, validity, uid }) => {
+  console.log(uid);
+  console.log(holder);
   expiry = Number(expiry);
   try {
     await storage.setItem(uid, {
@@ -25,7 +27,7 @@ const updateCard = async ({ holder, expiry, validity, uid }) => {
 };
 
 // returns a matching card if it exist
-const checkForCard = async cardUid => {
+const checkForCard = async (cardUid) => {
   try {
     const cards = await storage.data();
     for (let info of cards) {
@@ -40,4 +42,8 @@ const checkForCard = async cardUid => {
   }
 };
 
-module.exports = { cacheSetup, updateCard, checkForCard };
+module.exports = { 
+  cacheSetup,
+  updateCard,
+  checkForCard,
+};

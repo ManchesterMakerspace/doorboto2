@@ -76,7 +76,7 @@ const cronUpdate = async () => {
     while ((card = await cursor.next())) {
       if (card) {
         // update local cache to be in sync with source of truth
-        updateCard(card);
+        await updateCard(card);
       }
     }
     client.close();
@@ -88,8 +88,8 @@ const cronUpdate = async () => {
 };
 
 // High level start up sequence
-const run = () => {
-  cacheSetup('./members/');
+const run = async () => {
+  await cacheSetup('./members/');
   // Pass arduino connection function a callback to handle on data events
   serialInit(authorize);
   // Regular database check that updates local cache
