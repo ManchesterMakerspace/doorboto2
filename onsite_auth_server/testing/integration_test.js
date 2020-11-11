@@ -59,8 +59,8 @@ const runOne = async () => {
 }
 
 if(!module.parent){
-  runOne();
-  // runAll();
+  // runOne();
+  runAll();
 }
 
 module.exports = {

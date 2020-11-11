@@ -57,7 +57,7 @@ const authorize = async uid => {
       : `Cache empty and `;
     adminAttention(`${situation}DB unavailable to check ${uid}: => ${error}`);
   });
-  // if no card data came from cache and we have a db entry
+  // if no card data came from cache
   if (!standing?.cardData) {
     // figure ultimately if this is an unregistered user
     // given no card data in cache or db

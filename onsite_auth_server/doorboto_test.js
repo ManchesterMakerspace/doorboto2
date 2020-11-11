@@ -1,6 +1,6 @@
 // doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
-const { authorize, cronUpdate } = require( './doorboto.js');
-const { createCardArray, createCards } = require( './storage/on_site_cache_test.js');
+const { authorize, cronUpdate, checkStanding } = require( './doorboto.js');
+const { createCardArray, createCards, rejectedCard, acceptedCard } = require( './storage/on_site_cache_test.js');
 const { cacheSetup } = require( './storage/on_site_cache.js');
 const fs = require( 'fs/promises');
 const { connectDB, insertDoc } = require('./storage/mongo.js');
@@ -22,6 +22,37 @@ const noValidDbTest = async () =>{
   } finally {
     await fs.rmdir(TEST_PATH, { recursive: true });
     // Recursive option to be deprecated? No promise/async fs.rm? Confusing
+  }
+}
+
+const itUnderstandsGoodStanding = () => {
+  const cardData = acceptedCard();
+  const standing = checkStanding(cardData);
+  try {
+    const {authorized, cardData, msg} = standing;
+    if(authorized){
+      console.log(`correctly assessed standing "${msg}" for ${cardData.holder}`);
+    } else {
+      throw new Error('data should be in good standing but assessed as not');
+    }
+  } catch (error){
+    console.log(`goodStanding => ${error}`)
+  }
+
+}
+
+const itUnderstandsBadStanding = () => {
+  const cardData = rejectedCard();
+  const standing = checkStanding(cardData);
+  try {
+    const {authorized, cardData, msg} = standing;
+    if(authorized){
+      throw new Error('data should be in bad standing but assessed as good');
+    } else {
+      console.log(`correctly assessed standing "${msg}" for ${cardData.holder}`);
+    }
+  } catch (error){
+    console.log(`badStanding => ${error}`)
   }
 }
 
@@ -63,4 +94,6 @@ module.exports = {
   noValidDbTest,
   canUpdateCacheOfMembers,
   recordsRejection,
+  itUnderstandsGoodStanding,
+  itUnderstandsBadStanding,
 };
