@@ -12,8 +12,6 @@ const cacheSetup = async dir => {
 
 // Takes a card object and sets it to local storage
 const updateCard = async ({ holder, expiry, validity, uid }) => {
-  console.log(uid);
-  console.log(holder);
   expiry = Number(expiry);
   try {
     await storage.setItem(uid, {

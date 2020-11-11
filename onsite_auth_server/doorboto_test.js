@@ -17,9 +17,25 @@ const noValidDbTest = async () =>{
     for (let i = 0; i < cards.length; i++) {
       await authorize(cards[i].uid).catch(console.log);
     }
-    await authorize('erm');
   } catch (error){
     console.log(`Authorize test issue => ${error}`);
+  } finally {
+    await fs.rmdir(TEST_PATH, { recursive: true });
+    // Recursive option to be deprecated? No promise/async fs.rm? Confusing
+  }
+}
+
+// Integration test to run with Mongo
+const recordsRejection = async () => {
+  console.log(`running records rejection test in ${TEST_PATH}`);
+  try {
+    await cacheSetup(TEST_PATH);
+    const cards = createCardArray(1);
+    await createCards(cards);
+    // 'cardToReject' is and invalid uid that should be rejected
+    await authorize('cardToReject');
+  } catch (error){
+    console.log(`Records rejection => ${error}`);
   } finally {
     await fs.rmdir(TEST_PATH, { recursive: true });
     // Recursive option to be deprecated? No promise/async fs.rm? Confusing
@@ -46,4 +62,5 @@ const canUpdateCacheOfMembers = async () => {
 module.exports = {
   noValidDbTest,
   canUpdateCacheOfMembers,
+  recordsRejection,
 };

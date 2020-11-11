@@ -1,6 +1,6 @@
 // reader_com Copyright 2020 Manchester Makerspace MIT Licence
 const SerialPort = require('serialport');
-const { Readline } = SerialPort;
+const Readline = require('@serialport/parser-readline');
 // on yun DO NOT NPM INSTALL -> opkg install node-serialport,
 // use global lib instead, actually new library probably no good
 const RETRY_DELAY = 5000;
