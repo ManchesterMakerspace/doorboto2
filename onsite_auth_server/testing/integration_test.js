@@ -1,19 +1,20 @@
-// all_the_test.mjs Copyright 2020 Manchester Makerspace MIT License
-const { runCacheTest } = require('./storage/on_site_cache_test.js');
-const { 
-  noValidDbTest,
+// integration_test.js Copyright 2020 Manchester Makerspace MIT License
+// Test that require the reader, a slack credential, or db setup and access
+
+const {
   recordsRejection,
-  // canUpdateCacheOfMembers,
-} = require('./doorboto_test.js');
+  canUpdateCacheOfMembers,
+} = require('../doorboto_test.js');
 const { 
   canItDenyAccess,
-  // canItGrantAccess,
-} = require('./hardware_interface/reader_com_test.js');
+  canItGrantAccess,
+} = require('../hardware_interface/reader_com_test.js');
 
 const runThemAll = async () => {
   try {
-    await runCacheTest();
-    await noValidDbTest();
+    canItDenyAccess();
+    canItGrantAccess();
+    await canUpdateCacheOfMembers();
     process.exit(0);
   } catch (error){
     console.log(`runThemAll => ${error}`);
