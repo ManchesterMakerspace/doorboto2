@@ -10,3 +10,5 @@ jitploy/decrypted_*
 .vscode
 personal.sh
 test_storage
+prod.sh
+members
