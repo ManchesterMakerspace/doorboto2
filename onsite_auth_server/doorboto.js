@@ -14,24 +14,28 @@ const { slackSend, adminAttention } = require('./outward_telemetry/slack.js');
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
+// Looks at card data and returns an object representing member standing
 const checkStanding = cardData => {
-  // make sure card has been marked with a valid state and unexpired
+  if (!cardData) {
+    return {};
+  }
   const { validity, holder, expiry } = cardData;
   const standing = {
-    good: false,
-    cardData: {...cardData},
+    authorized: false,
+    cardData: { ...cardData },
     msg: `${holder}'s ${validity} card was scanned`,
   };
+  // make sure card has been marked with a valid state and unexpired
   if (validity === 'activeMember' || validity === 'nonMember') {
     if (new Date().getTime() < new Date(expiry).getTime() + LENIENCY) {
       giveAccess(true); // Trigger the door strike to open
-      standing.good = true;
+      standing.authorized = true;
       standing.msg = `${holder} checked in`;
     } else {
       standing.msg = `Denied access: ${holder}'s membership as lapsed`;
     }
   }
-  if(!standing.good){
+  if (!standing.authorized) {
     giveAccess(false);
     if (standing.cardData.holder) {
       adminAttention(standing.msg, standing.cardData.holder);
@@ -39,32 +43,39 @@ const checkStanding = cardData => {
     standing.cardData.timeOf = new Date();
   }
   return standing;
-}
+};
 
 const authorize = async uid => {
-  let standing = {
-    authorized: false,
-    cardData: null,
-    msg: '',
-  };
   const cacheCardData = await checkForCard(uid);
-  if(cacheCardData){
-    standing = checkStanding(cacheCardData);
+  let standing = checkStanding(cacheCardData);
+  const { dbCardData, recordScan } = await getCardFromDb(uid).catch(error => {
+    const situation = standing?.cardData
+      ? `${standing.cardData.holder} ${
+          standing.authorized ? 'checked in but ' : 'was denied and '
+        }`
+      : `Cache empty and `;
+    adminAttention(`${situation}DB unavailable to check ${uid}: => ${error}`);
+  });
+  // if no card data came from cache and we have a db entry
+  if (!standing?.cardData) {
+    // figure ultimately if this is an unregistered user
+    // given no card data in cache or db
+    const cardData = dbCardData
+      ? dbCardData
+      : {
+          validity: 'unregistered',
+          holder: 'blank',
+          expiry: 0,
+        };
+    standing = checkStanding(cardData);
   }
-  const {dbCardData, recordScan} = await getCardFromDb(uid);
-  if (!standing.cardData){
-    if(dbCardData){
-      standing = checkStanding(dbCardData);
-    } else {
-      adminAttention(`Cache empty and db unavailable to check ${uid}`);
-    } 
-  }
-  if(dbCardData?.holder){
+  // Regardless of cache or db check, if data is in db, update it into cache
+  if (dbCardData) {
     updateCard(dbCardData);
   }
   slackSend(standing.msg);
   // record this card scan reject or checkin and cleanly close db
-  await recordScan(standing.good, standing.cardData);
+  await recordScan(standing.authorized, standing.cardData);
 };
 
 // runs a time based update operation
@@ -97,7 +108,7 @@ const run = async () => {
 };
 
 // Run doorboto if not being called by test or other applications
-if(!module.parent){
+if (!module.parent) {
   run();
 }
 
@@ -106,4 +117,4 @@ module.exports = {
   cronUpdate,
   checkStanding,
   run,
-}
+};

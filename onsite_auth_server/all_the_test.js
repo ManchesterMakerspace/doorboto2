@@ -2,9 +2,13 @@
 const { runCacheTest } = require('./storage/on_site_cache_test.js');
 const { 
   noValidDbTest,
-  canUpdateCacheOfMembers,
+  recordsRejection,
+  // canUpdateCacheOfMembers,
 } = require('./doorboto_test.js');
-// const {  } = require('./storage/mongo_test.js');
+const { 
+  canItDenyAccess,
+  // canItGrantAccess,
+} = require('./hardware_interface/reader_com_test.js');
 
 const runThemAll = async () => {
   try {
@@ -20,7 +24,10 @@ const runOne = async () => {
   try {
     // await runCacheTest();
     // await noValidDbTest();
-    await canUpdateCacheOfMembers();
+    // await canUpdateCacheOfMembers();
+    // canItGrantAccess();
+    // canItDenyAccess();
+    await recordsRejection();
     process.exit(0);
   } catch (error){
     console.log(`runOne => ${error}`);
