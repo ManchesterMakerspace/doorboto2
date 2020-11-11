@@ -26,11 +26,11 @@ const slackSend = (msg, path = DEFAULT_WEBHOOK) => {
   });
 };
 
-const adminAttention = (msg, member = 'doorboto admin') => {
+const adminAttention = async (msg, member = 'doorboto admin') => {
   const atChannel = '<!channel> ';
   const msgBlock = '```' + msg + '```';
   const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
-  slackSend(adminMsg, process.env.MR_WEBHOOK);
+  await slackSend(adminMsg, process.env.MR_WEBHOOK);
 };
 
 module.exports = { slackSend, adminAttention };

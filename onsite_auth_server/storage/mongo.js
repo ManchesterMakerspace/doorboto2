@@ -37,12 +37,14 @@ const insertDoc = doc => {
 
 // Hold db and closeDb in closure to use after standing check
 const makeRecordOfScanFunc = (db, client) => {
-  return async (denied, cardData) => {
-    const collection = denied ? 'rejections' : 'checkins';
-    const data = denied ? cardData : {
-      name: cardData.holder,
-      time: new Date().getTime(),
-    };
+  return async ({ authorized, cardData }) => {
+    const collection = authorized ? 'checkins' : 'rejections';
+    const data = authorized
+      ? {
+        name: cardData.holder,
+        time: new Date().getTime(),
+      }
+      : cardData;
     await db.collection(collection).insertOne(insertDoc(data));
     client.close();
   }

@@ -25,13 +25,16 @@ const updateCard = async ({ holder, expiry, validity, uid }) => {
 };
 
 // returns a matching card if it exist
-const checkForCard = async (cardUid) => {
+const checkForCard = async (uid) => {
   try {
     const cards = await storage.data();
     for (let info of cards) {
       const { key, value } = info;
-      if (key === cardUid) {
-        return value;
+      if (key === uid) {
+        return {
+          uid,
+          ...value,
+        };
       }
     }
     return null;

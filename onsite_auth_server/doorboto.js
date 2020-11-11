@@ -20,10 +20,11 @@ const checkStanding = cardData => {
     return {};
   }
   const { validity, holder, expiry } = cardData;
+  const whom = holder ? `${holder}'s ` : ''
   const standing = {
     authorized: false,
     cardData: { ...cardData },
-    msg: `${holder}'s ${validity} card was scanned`,
+    msg: `${whom}${validity} card was scanned`,
   };
   // make sure card has been marked with a valid state and unexpired
   if (validity === 'activeMember' || validity === 'nonMember') {
@@ -63,10 +64,11 @@ const authorize = async uid => {
     const cardData = dbCardData
       ? dbCardData
       : {
+          uid,
           validity: 'unregistered',
-          holder: 'blank',
+          holder: '',
           expiry: 0,
-        };
+      };
     standing = checkStanding(cardData);
   }
   // Regardless of cache or db check, if data is in db, update it into cache
@@ -75,7 +77,7 @@ const authorize = async uid => {
   }
   slackSend(standing.msg);
   // record this card scan reject or checkin and cleanly close db
-  await recordScan(standing.authorized, standing.cardData);
+  await recordScan(standing);
 };
 
 // runs a time based update operation

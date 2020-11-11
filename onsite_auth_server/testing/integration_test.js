@@ -9,27 +9,50 @@ const {
   canItDenyAccess,
   canItGrantAccess,
 } = require('../hardware_interface/reader_com_test.js');
+const {
+  itCanSendAdminMsg,
+  itCanSendMsg,
+} = require('../outward_telemetry/slack_test.js');
 
-const runThemAll = async () => {
+const slackTest = async () => {
+  try {
+    await itCanSendMsg();
+    await itCanSendAdminMsg();
+  } catch (error){
+    console.log(`slackTest => ${error}`);
+  }
+}
+
+const mongoTest = async () => {
+  try {
+    await canUpdateCacheOfMembers();
+    await recordsRejection();
+  } catch (error){
+    console.log(`mongoTest => ${error}`);
+  }
+}
+
+const readerTest = () => {
   try {
     canItDenyAccess();
     canItGrantAccess();
-    await canUpdateCacheOfMembers();
-    process.exit(0);
   } catch (error){
-    console.log(`runThemAll => ${error}`);
+    console.log(`readerTest => ${error}`);
   }
+}
+
+const runAll = async() => {
+  const dbPromise = mongoTest();
+  const slackPromise = slackTest();
+  // readerTest();
+  await slackPromise;
+  await dbPromise;
+  process.exit(0);
 }
 
 const runOne = async () => {
   try {
-    // await runCacheTest();
-    // await noValidDbTest();
-    // await canUpdateCacheOfMembers();
-    // canItGrantAccess();
-    // canItDenyAccess();
     await recordsRejection();
-    process.exit(0);
   } catch (error){
     console.log(`runOne => ${error}`);
   }
@@ -37,10 +60,13 @@ const runOne = async () => {
 
 if(!module.parent){
   runOne();
-  // runThemAll();
+  // runAll();
 }
 
 module.exports = {
-  runThemAll,
+  readerTest,
+  mongoTest,
+  slackTest,
   runOne,
+  runAll,
 }
