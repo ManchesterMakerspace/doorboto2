@@ -55,7 +55,7 @@ const runAll = async() => {
 }
 
 const runOne = async () => {
-  await itCanOpenDoorQuickly();
+  await recordsRejection();
   await cleanUpDb();
 }
 

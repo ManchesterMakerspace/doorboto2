@@ -6,7 +6,7 @@ const cacheSetup = async dir => {
   try {
     return await storage.init({ dir });
   } catch (error) {
-    console.log(`cacheSetup issue: ${error}`);
+    console.log(`cacheSetup => ${error}`);
   }
 };
 
@@ -20,7 +20,7 @@ const updateCard = async ({ holder, expiry, validity, uid }) => {
       validity,
     });
   } catch (error) {
-    console.log(`updateCard issue: ${error}`);
+    console.log(`updateCard => ${error}`);
   }
 };
 
@@ -39,7 +39,7 @@ const checkForCard = async (uid) => {
     }
     return null;
   } catch (error) {
-    console.log(`checkForCard issue: ${error}`);
+    console.log(`checkForCard => ${error}`);
   }
 };
 

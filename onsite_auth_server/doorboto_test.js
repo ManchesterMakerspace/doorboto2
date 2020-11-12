@@ -4,8 +4,17 @@ const { createCardArray, createCards, rejectedCard, acceptedCard } = require( '.
 const { cacheSetup, updateCard } = require( './storage/on_site_cache.js');
 const fs = require( 'fs/promises');
 const { connectDB, insertDoc } = require('./storage/mongo.js');
+const oid = require('./storage/oid.js');
 
 const TEST_PATH = `${__dirname}/test_storage/`;
+const REJECTION = 'rejections';
+const CHECKIN = 'checkins';
+const CARDS = 'cards';
+const COLLECTIONS = [
+  CARDS,
+  CHECKIN,
+  REJECTION,
+];
 
 // Members should be able to authorize solely on cache
 const noValidDbTest = async () =>{
@@ -61,10 +70,18 @@ const recordsRejection = async () => {
   console.log(`running records rejection test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
-    const cards = createCardArray(1);
-    await createCards(cards);
-    // 'cardToReject' is and invalid uid that should be rejected
-    await authorize('cardToReject');
+    const uid = oid();
+    await authorize( uid, authorized => {
+      const result = authorized ?  'FAILURE' : 'SUCCESS';
+      const status = authorized ? 'accepted' : 'rejected';
+      console.log(`${result}: this card was ${status}`)
+    });
+    const {db, client} = await connectDB();
+    const rejectDoc = await db.collection(REJECTION).findOne({uid});
+    const rejectedResult = rejectDoc ? 'SUCCESS' : 'FAILURE';
+    const rejectedStatus = rejectDoc ? 'inserted rejection' : 'did not insert';
+    console.log(`${rejectedResult}: ${rejectedStatus} into database`);
+    await client.close();
   } catch (error){
     console.log(`Records rejection => ${error}`);
   } finally {
@@ -80,7 +97,7 @@ const canUpdateCacheOfMembers = async () => {
     const cards = createCardArray(2);
     const {db, client} = await connectDB();
     for (let i = 0; i < cards.length; i++) {
-      await db.collection('cards').insertOne(insertDoc(cards[i]));
+      await db.collection(CARDS).insertOne(insertDoc(cards[i]));
     }
     client.close();
     await cronUpdate();
@@ -99,7 +116,7 @@ const itCanOpenDoorQuickly = async () => {
   const card = acceptedCard();
   updateCard(card);
   const {db, client} = await connectDB();
-  await db.collection('cards').insertOne(insertDoc(card));
+  await db.collection(CARDS).insertOne(insertDoc(card));
   await client.close();
   const startMillis = Date.now();
   await authorize(card.uid, authorized => {
@@ -116,9 +133,8 @@ const itCanOpenDoorQuickly = async () => {
 // fresh db start for integration test
 const cleanUpDb = async () => {
   const {db, client} = await connectDB();
-  const collections = ['cards', 'checkins', 'rejections'];
   const promises = [];
-  collections.forEach( collection => {
+  COLLECTIONS.forEach( collection => {
     promises.push(db.collection(collection).drop());
   })
   for (let i in promises){
