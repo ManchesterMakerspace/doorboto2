@@ -113,6 +113,24 @@ const itCanOpenDoorQuickly = async () => {
   console.log(`it took ${finishDuration} millis to finish`);
 }
 
+// fresh db start for integration test
+const cleanUpDb = async () => {
+  const {db, client} = await connectDB();
+  const collections = ['cards', 'checkins', 'rejections'];
+  const promises = [];
+  collections.forEach( collection => {
+    promises.push(db.collection(collection).drop());
+  })
+  for (let i in promises){
+    try {
+      await promises[i];
+    } catch (error){
+      console.log(`cleanUpDb => ${error}`);
+    }
+  }
+  await client.close()
+}
+
 module.exports = {
   noValidDbTest,
   canUpdateCacheOfMembers,
@@ -120,4 +138,5 @@ module.exports = {
   itUnderstandsGoodStanding,
   itUnderstandsBadStanding,
   itCanOpenDoorQuickly,
+  cleanUpDb,
 };
