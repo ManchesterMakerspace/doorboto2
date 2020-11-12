@@ -17,14 +17,18 @@ const COLLECTIONS = [
 ];
 
 // Members should be able to authorize solely on cache
+// Unit test to run without database env vars
 const noValidDbTest = async () =>{
   console.log(`running no valid db test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
-    const cards = createCardArray(2);
+    const cards = [ acceptedCard(), rejectedCard() ];
     await createCards(cards);
     for (let i = 0; i < cards.length; i++) {
-      await authorize(cards[i].uid).catch(console.log);
+      await authorize(cards[i].uid, authorized => {
+        const status = authorized ? 'checked in' : 'rejected';
+        console.log(`${cards[i].holder} was ${status} without database`);
+      }).catch(console.log);
     }
   } catch (error){
     console.log(`Authorize test issue => ${error}`);
@@ -35,8 +39,9 @@ const noValidDbTest = async () =>{
 }
 
 const itUnderstandsGoodStanding = () => {
+  console.log(`Running is good standing test`);
   const cardData = acceptedCard();
-  const standing = checkStanding(cardData);
+  const standing = checkStanding(cardData, ()=>{});
   try {
     const {authorized, cardData, msg} = standing;
     if(authorized){
@@ -51,8 +56,9 @@ const itUnderstandsGoodStanding = () => {
 }
 
 const itUnderstandsBadStanding = () => {
+  console.log(`running is bad standing test`);
   const cardData = rejectedCard();
-  const standing = checkStanding(cardData);
+  const standing = checkStanding(cardData, ()=>{});
   try {
     const {authorized, cardData, msg} = standing;
     if(authorized){
