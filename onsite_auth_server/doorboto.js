@@ -5,17 +5,14 @@ const {
   updateCard,
   checkForCard,
 } = require('./storage/on_site_cache.js');
-const {
-  serialInit,
-  giveAccess,
-} = require('./hardware_interface/reader_com.js');
+const { serialInit } = require('./hardware_interface/reader_com.js');
 const { slackSend, adminAttention } = require('./outward_telemetry/slack.js');
 
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // Looks at card data and returns an object representing member standing
-const checkStanding = cardData => {
+const checkStanding = (cardData, giveAccess) => {
   if (!cardData) {
     return {};
   }
@@ -46,9 +43,9 @@ const checkStanding = cardData => {
   return standing;
 };
 
-const authorize = async uid => {
+const authorize = async (uid, giveAccess) => {
   const cacheCardData = await checkForCard(uid);
-  let standing = checkStanding(cacheCardData);
+  let standing = checkStanding(cacheCardData, giveAccess);
   const { dbCardData, recordScan } = await getCardFromDb(uid).catch(error => {
     const situation = standing?.cardData
       ? `${standing.cardData.holder} ${
@@ -69,7 +66,7 @@ const authorize = async uid => {
           holder: '',
           expiry: 0,
       };
-    standing = checkStanding(cardData);
+    standing = checkStanding(cardData, giveAccess);
   }
   // Regardless of cache or db check, if data is in db, update it into cache
   if (dbCardData) {

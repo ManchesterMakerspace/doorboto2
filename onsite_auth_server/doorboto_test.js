@@ -1,7 +1,7 @@
 // doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
 const { authorize, cronUpdate, checkStanding } = require( './doorboto.js');
 const { createCardArray, createCards, rejectedCard, acceptedCard } = require( './storage/on_site_cache_test.js');
-const { cacheSetup } = require( './storage/on_site_cache.js');
+const { cacheSetup, updateCard } = require( './storage/on_site_cache.js');
 const fs = require( 'fs/promises');
 const { connectDB, insertDoc } = require('./storage/mongo.js');
 
@@ -90,10 +90,34 @@ const canUpdateCacheOfMembers = async () => {
   }
 }
 
+// integration test to maintain a key but subtle expected behaviour
+// A database request should not block first attempt to authorize a key against cache
+// if it does this causes significant lag in the doors reaction to authorized key holders
+const itCanOpenDoorQuickly = async () => {
+  console.log(`It can quickly open the door, USE REMOTE DB LIKE PROD`);
+  await cacheSetup(TEST_PATH);
+  const card = acceptedCard();
+  updateCard(card);
+  const {db, client} = await connectDB();
+  await db.collection('cards').insertOne(insertDoc(card));
+  await client.close();
+  const startMillis = Date.now();
+  await authorize(card.uid, authorized => {
+    const authMillis = Date.now();
+    const authDuration = authMillis - startMillis;
+    const status = authorized && authDuration < 30 ? "SUCCESS" : "FAILURE";
+    console.log(`${status}: It took ${authDuration} millis to authorize`);
+  });
+  const finishMillis = Date.now();
+  const finishDuration = finishMillis - startMillis;
+  console.log(`it took ${finishDuration} millis to finish`);
+}
+
 module.exports = {
   noValidDbTest,
   canUpdateCacheOfMembers,
   recordsRejection,
   itUnderstandsGoodStanding,
   itUnderstandsBadStanding,
+  itCanOpenDoorQuickly,
 };
