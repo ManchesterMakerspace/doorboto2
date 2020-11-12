@@ -5,6 +5,7 @@ const {
   recordsRejection,
   canUpdateCacheOfMembers,
   itCanOpenDoorQuickly,
+  canAuthRecentlyUpdated,
   cleanUpDb,
 } = require('../doorboto_test.js');
 const { 
@@ -28,8 +29,12 @@ const slackTest = async () => {
 const mongoTest = async () => {
   try {
     await canUpdateCacheOfMembers();
+    await cleanUpDb();
     await recordsRejection();
+    await cleanUpDb();
     await itCanOpenDoorQuickly();
+    await cleanUpDb();
+    await canAuthRecentlyUpdated();
     await cleanUpDb();
   } catch (error){
     console.log(`mongoTest => ${error}`);
@@ -55,8 +60,7 @@ const runAll = async() => {
 }
 
 const runOne = async () => {
-  await recordsRejection();
-  await cleanUpDb();
+  await mongoTest();
 }
 
 if(!module.parent){

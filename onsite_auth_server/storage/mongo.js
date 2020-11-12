@@ -44,7 +44,10 @@ const makeRecordOfScanFunc = (db, client) => {
         name: cardData.holder,
         time: new Date().getTime(),
       }
-      : cardData;
+      : {
+        ...cardData,
+        timeOf: new Date(),
+      };
     await db.collection(collection).insertOne(insertDoc(data));
     client.close();
   }
@@ -54,14 +57,8 @@ const makeRecordOfScanFunc = (db, client) => {
 const getCardFromDb = async uid => {
   const {db, client} = await connectDB();
   // default to unregistered card
-  let dbCardData = {
-    uid,
-    holder: null,
-    validity: 'unregistered',
-    expiry: 0,
-  };
   const result = {
-    dbCardData,
+    dbCardData: null,
     recordScan: async () => {},
   }
   if(!db){
