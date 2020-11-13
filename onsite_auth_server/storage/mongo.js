@@ -11,7 +11,7 @@ const connectDB = async () => {
   const client = new MongoClient(MONGODB_URI, DB_OPTIONS);
   const returnObj = {
     db: null,
-    closeDb: null,
+    client: null,
   }
   if (!MONGODB_URI || !DB_NAME) {
     console.log(`Invalid env: ${DB_NAME} @ ${MONGODB_URI}`);
