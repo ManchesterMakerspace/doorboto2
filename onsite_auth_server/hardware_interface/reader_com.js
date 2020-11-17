@@ -32,7 +32,7 @@ const serialInit = onData => {
   });
   // Parser data stream is being piped into, expecting card UID
   parser.on('data', data => {
-    onData(data, authorized => {
+    onData( data, (authorized) => {
       // Reaction for when an authorized card is found
       port.write(authorized ? '<a>' : '<d>');
     });
