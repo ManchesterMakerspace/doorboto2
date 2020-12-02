@@ -30,8 +30,8 @@ const connectDB = async () => {
 
 const insertDoc = doc => {
   return {
-    _id: new ObjectID(),
     ...doc,
+    _id: new ObjectID(),
   };
 };
 
