@@ -6,14 +6,14 @@ const Readline = require('@serialport/parser-readline');
 const RETRY_DELAY = 5000;
 const ARDUINO_PORT = process.env.ARDUINO_PORT ?? null;
 
-const reconnect = () => {
+const reconnect = (onData) => {
   return error => {
     // given something went wrong try to re-establish connection
     if (error) {
       console.log(error);
     }
     setTimeout(() => {
-      serialInit();
+      serialInit(onData);
     }, RETRY_DELAY);
   };
 };
@@ -39,8 +39,8 @@ const serialInit = onData => {
   });
   // try to reconnect on errors or port close.
   // Could just be a wire disconnect
-  port.on('close', reconnect());
-  port.on('error', reconnect());
+  port.on('close', reconnect(onData));
+  port.on('error', reconnect(onData));
 };
 
 module.exports = { serialInit };
