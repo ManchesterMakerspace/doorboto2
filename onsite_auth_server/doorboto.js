@@ -57,8 +57,8 @@ const authorize = async (uid, giveAccess) => {
       : {
           uid,
           validity: 'unregistered',
-          holder: '',
-          expiry: 0,
+          holder: null,
+          expiry: null,
       };
     standing = checkStanding(cardData, giveAccess);
     // if authorized trigger strike if not flash red
