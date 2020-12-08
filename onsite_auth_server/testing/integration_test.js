@@ -60,7 +60,7 @@ const runAll = async() => {
 }
 
 const runOne = async () => {
-  await mongoTest();
+  slackTest();
 }
 
 if(!module.parent){
