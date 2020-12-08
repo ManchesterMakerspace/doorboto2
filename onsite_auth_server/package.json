@@ -1,16 +1,17 @@
 {
-  "name": "doorboto2",
+  "name": "doorboto",
   "version": "3.0.6",
   "description": "This is a server for an access control system",
-  "main": "doorboto2.js",
+  "main": "doorboto.js",
   "scripts": {
+    "start": ". ./prod.sh && pm2 start ecosystem.config.js",
     "test": "node testing/unit_test.js",
     "i-test": "testing/./run_integration.sh",
     "manual-test": "nodemon doorboto.js",
-    "start-prod": "npx pm2 start ecosystem.config.js",
-    "show-logs": "npx pm2 logs",
-    "shutdown": "npx pm2 delete ecosystem.config.js",
-    "restart": "npx pm2 restart ecosystem.config.js",
+    "show-logs": "pm2 logs",
+    "shutdown": "pm2 delete ecosystem.config.js",
+    "restart": "pm2 restart ecosystem.config.js",
+    "install": "./install.sh",
     "postversion": "git push"
   },
   "repository": {
