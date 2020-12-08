@@ -1,6 +1,6 @@
 {
   "name": "doorboto",
-  "version": "3.1.0",
+  "version": "3.1.2",
   "description": "This is a server for an access control system",
   "main": "doorboto.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "shutdown": "pm2 delete ecosystem.config.js",
     "restart": "pm2 restart ecosystem.config.js",
     "install": "./install.sh",
-    "postversion": "git push"
+    "postversion": "git add . && git commit && git push && git push --tags"
   },
   "repository": {
     "type": "git",
