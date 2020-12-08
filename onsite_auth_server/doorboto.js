@@ -35,7 +35,7 @@ const checkStanding = cardData => {
 
 const authorize = async (uid, giveAccess) => {
   const cacheCardData = await checkForCard(uid);
-  let standing = checkStanding(cacheCardData, giveAccess);
+  let standing = checkStanding(cacheCardData);
   if(standing.authorized){
     giveAccess(true);
     slackSend(standing.msg);
@@ -46,8 +46,8 @@ const authorize = async (uid, giveAccess) => {
       const situation = standing?.cardData
         ? `${standing.cardData.holder} ${authStatus}`
         : `Cache empty and `;
-    adminAttention(`${situation} DB unavailable to check ${uid}: => ${error}`);
-  });
+      adminAttention(`${situation} DB unavailable to check ${uid}: => ${error}`);
+    });
   // if not authorized by cache check against db data
   if (!standing.authorized) {
     // figure ultimately if this is an unregistered user
@@ -60,7 +60,7 @@ const authorize = async (uid, giveAccess) => {
           holder: null,
           expiry: null,
       };
-    standing = checkStanding(cardData, giveAccess);
+    standing = checkStanding(cardData);
     // if authorized trigger strike if not flash red
     giveAccess(standing.authorized);
     // regardless, report to #doorboto activity
