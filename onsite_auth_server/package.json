@@ -1,6 +1,6 @@
 {
   "name": "doorboto",
-  "version": "3.0.6",
+  "version": "3.1.0",
   "description": "This is a server for an access control system",
   "main": "doorboto.js",
   "scripts": {
