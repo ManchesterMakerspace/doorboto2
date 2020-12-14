@@ -7,7 +7,7 @@ const RETRY_DELAY = 5000;
 const ARDUINO_PORT = process.env.ARDUINO_PORT ?? null;
 
 const reconnect = (onData) => {
-  return error => {
+  return (error) => {
     // given something went wrong try to re-establish connection
     if (error) {
       console.log(error);
@@ -18,10 +18,10 @@ const reconnect = (onData) => {
   };
 };
 
-const serialInit = onData => {
-  if(ARDUINO_PORT === null){
+const serialInit = (onData) => {
+  if (ARDUINO_PORT === null) {
     console.log(`Port failed to be specified`);
-    return; 
+    return;
   }
   const port = new SerialPort(ARDUINO_PORT, { baudRate: 9600 });
   const parser = new Readline({ delimiter: '\r\n' });
@@ -31,8 +31,8 @@ const serialInit = onData => {
     console.log(`Arduino connected on ${ARDUINO_PORT}`);
   });
   // Parser data stream is being piped into, expecting card UID
-  parser.on('data', data => {
-    onData( data, (authorized) => {
+  parser.on('data', (data) => {
+    onData(data, (authorized) => {
       // Reaction for when an authorized card is found
       port.write(authorized ? '<a>' : '<d>');
     });

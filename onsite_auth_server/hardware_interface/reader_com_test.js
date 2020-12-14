@@ -3,14 +3,14 @@
 const { serialInit } = require('./reader_com.js');
 
 const canItGrantAccess = () => {
-  serialInit( (data, giveAccess) => {
+  serialInit((data, giveAccess) => {
     console.log(data);
     giveAccess(true);
   });
 };
 
 const canItDenyAccess = () => {
-  serialInit( (data, giveAccess) => {
+  serialInit((data, giveAccess) => {
     console.log(data);
     giveAccess(false);
   });
@@ -19,4 +19,4 @@ const canItDenyAccess = () => {
 module.exports = {
   canItGrantAccess,
   canItDenyAccess,
-}
+};

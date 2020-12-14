@@ -12,13 +12,13 @@ const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // Looks at card data and returns an object representing member standing
-const checkStanding = cardData => {
+const checkStanding = (cardData) => {
   const standing = { authorized: false };
   if (!cardData) {
     return standing;
   }
   const { validity, holder, expiry } = cardData;
-  const whom = holder ? `${holder}'s ` : ''
+  const whom = holder ? `${holder}'s ` : '';
   standing.cardData = { ...cardData };
   standing.msg = `${whom}${validity} card was scanned`;
   // make sure card has been marked with a valid state and unexpired
@@ -36,18 +36,19 @@ const checkStanding = cardData => {
 const authorize = async (uid, giveAccess) => {
   const cacheCardData = await checkForCard(uid);
   let standing = checkStanding(cacheCardData);
-  if(standing.authorized){
+  if (standing.authorized) {
     giveAccess(true);
     slackSend(standing.msg);
   }
-  const { dbCardData, recordScan } = await getCardFromDb(uid)
-    .catch(error => {
-      const authStatus = standing.authorized ? 'checked in but' : 'was denied and';
-      const situation = standing?.cardData
-        ? `${standing.cardData.holder} ${authStatus}`
-        : `Cache empty and `;
-      adminAttention(`${situation} DB unavailable to check ${uid}: => ${error}`);
-    });
+  const { dbCardData, recordScan } = await getCardFromDb(uid).catch((error) => {
+    const authStatus = standing.authorized
+      ? 'checked in but'
+      : 'was denied and';
+    const situation = standing?.cardData
+      ? `${standing.cardData.holder} ${authStatus}`
+      : `Cache empty and `;
+    adminAttention(`${situation} DB unavailable to check ${uid}: => ${error}`);
+  });
   // if not authorized by cache check against db data
   if (!standing.authorized) {
     // figure ultimately if this is an unregistered user
@@ -59,7 +60,7 @@ const authorize = async (uid, giveAccess) => {
           validity: 'unregistered',
           holder: null,
           expiry: null,
-      };
+        };
     standing = checkStanding(cardData);
     // if authorized trigger strike if not flash red
     giveAccess(standing.authorized);
@@ -95,7 +96,7 @@ const cronUpdate = async (recurse = true) => {
     console.log(`Issue connecting on update: ${error}`);
   }
   // make upcoming expiration check every interval
-  if(recurse){
+  if (recurse) {
     setTimeout(cronUpdate, HOUR);
   }
 };

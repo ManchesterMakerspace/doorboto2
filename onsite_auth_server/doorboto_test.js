@@ -26,7 +26,7 @@ const noValidDbTest = async () => {
     const cards = [acceptedCard(), rejectedCard()];
     await createCards(cards);
     for (let i = 0; i < cards.length; i++) {
-      await authorize(cards[i].uid, authorized => {
+      await authorize(cards[i].uid, (authorized) => {
         const status = authorized ? 'checked in' : 'rejected';
         console.log(`${cards[i].holder} was ${status} without database`);
       }).catch(console.log);
@@ -81,7 +81,7 @@ const recordsRejection = async () => {
   try {
     await cacheSetup(TEST_PATH);
     const uid = oid();
-    await authorize(uid, authorized => {
+    await authorize(uid, (authorized) => {
       const result = authorized ? 'FAILURE' : 'SUCCESS';
       const status = authorized ? 'accepted' : 'rejected';
       console.log(`${result}: this card was ${status}`);
@@ -129,7 +129,7 @@ const itCanOpenDoorQuickly = async () => {
   await db.collection(CARDS).insertOne(insertDoc(card));
   await client.close();
   const startMillis = Date.now();
-  await authorize(card.uid, authorized => {
+  await authorize(card.uid, (authorized) => {
     const authMillis = Date.now();
     const authDuration = authMillis - startMillis;
     const status = authorized && authDuration < 30 ? 'SUCCESS' : 'FAILURE';
@@ -141,7 +141,7 @@ const itCanOpenDoorQuickly = async () => {
 };
 
 // integration test to see if database is double checked if cache is out of data
-const canAuthRecentlyUpdated = async() => {
+const canAuthRecentlyUpdated = async () => {
   console.log(`running can auth recent update test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -157,7 +157,7 @@ const canAuthRecentlyUpdated = async() => {
     // now test to see what happens
     let checkCount = 0;
     const startMillis = Date.now();
-    await authorize(card.uid, authorized => {
+    await authorize(card.uid, (authorized) => {
       const result = authorized ? 'SUCCESS' : 'FAILURE';
       const status = authorized ? 'accepted' : 'rejected';
       console.log(`${result}: this card was ${status}`);
@@ -166,10 +166,14 @@ const canAuthRecentlyUpdated = async() => {
       const finishDuration = finishMillis - startMillis;
       console.log(`it took ${finishDuration} millis to auth a new user`);
     });
-    if(checkCount !== 1){
-      console.log(`FAILURE: Check standing was called more than once or not at all`);
+    if (checkCount !== 1) {
+      console.log(
+        `FAILURE: Check standing was called more than once or not at all`
+      );
     }
-    const checkinDoc = await db.collection(CHECKIN).findOne({ name: card.holder });
+    const checkinDoc = await db
+      .collection(CHECKIN)
+      .findOne({ name: card.holder });
     const checkinResult = checkinDoc ? 'SUCCESS' : 'FAILURE';
     const checkinStatus = checkinDoc ? 'inserted checkin' : 'did not checkin';
     console.log(`${checkinResult}: ${checkinStatus} into database`);
@@ -180,20 +184,20 @@ const canAuthRecentlyUpdated = async() => {
     await fs.rmdir(TEST_PATH, { recursive: true });
     // Recursive option to be deprecated? No promise/async fs.rm? Confusing
   }
-}
+};
 
 // fresh db start for integration test
 const cleanUpDb = async () => {
   const { db, client } = await connectDB();
   const promises = [];
-  COLLECTIONS.forEach(collection => {
+  COLLECTIONS.forEach((collection) => {
     promises.push(db.collection(collection).drop());
   });
   for (let i in promises) {
     try {
       await promises[i];
     } catch (error) {
-      if(error !== 'MongoError: ns not found'){
+      if (error !== 'MongoError: ns not found') {
         console.log(`cleanUpDb => ${error}`);
       }
     }

@@ -8,7 +8,7 @@ const {
   canAuthRecentlyUpdated,
   cleanUpDb,
 } = require('../doorboto_test.js');
-const { 
+const {
   canItDenyAccess,
   canItGrantAccess,
 } = require('../hardware_interface/reader_com_test.js');
@@ -21,10 +21,10 @@ const slackTest = async () => {
   try {
     await itCanSendMsg();
     await itCanSendAdminMsg();
-  } catch (error){
+  } catch (error) {
     console.log(`slackTest => ${error}`);
   }
-}
+};
 
 const mongoTest = async () => {
   try {
@@ -36,34 +36,34 @@ const mongoTest = async () => {
     await cleanUpDb();
     await canAuthRecentlyUpdated();
     await cleanUpDb();
-  } catch (error){
+  } catch (error) {
     console.log(`mongoTest => ${error}`);
   }
-}
+};
 
 const readerTest = () => {
   try {
     canItDenyAccess();
     canItGrantAccess();
-  } catch (error){
+  } catch (error) {
     console.log(`readerTest => ${error}`);
   }
-}
+};
 
-const runAll = async() => {
+const runAll = async () => {
   const dbPromise = mongoTest();
   const slackPromise = slackTest();
   // readerTest();
   await slackPromise;
   await dbPromise;
   process.exit(0);
-}
+};
 
 const runOne = async () => {
   slackTest();
-}
+};
 
-if(!module.parent){
+if (!module.parent) {
   runOne();
   // runAll();
 }
@@ -74,4 +74,4 @@ module.exports = {
   slackTest,
   runOne,
   runAll,
-}
+};

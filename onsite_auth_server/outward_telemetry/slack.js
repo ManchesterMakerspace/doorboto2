@@ -1,10 +1,10 @@
 // slack.mjs Copyright 2020 Manchester Makerspace Licence MIT
 const { request } = require('https');
-const DEFAULT_WEBHOOK = process.env.DOORBOTO_WEBHOOK || ''
+const DEFAULT_WEBHOOK = process.env.DOORBOTO_WEBHOOK || '';
 
 const slackSend = (msg, path = DEFAULT_WEBHOOK) => {
   return new Promise((resolve) => {
-    if(!path){
+    if (!path) {
       console.log(msg);
       return;
     }

@@ -2,7 +2,7 @@
 // local cache logic for power, database, or network failure events
 const storage = require('node-persist');
 
-const cacheSetup = async dir => {
+const cacheSetup = async (dir) => {
   try {
     return await storage.init({ dir });
   } catch (error) {
@@ -43,7 +43,7 @@ const checkForCard = async (uid) => {
   }
 };
 
-module.exports = { 
+module.exports = {
   cacheSetup,
   updateCard,
   checkForCard,
