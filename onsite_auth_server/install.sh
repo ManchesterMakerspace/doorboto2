@@ -14,6 +14,7 @@ npm i -g pm2 # install pm2 Daemon management globally
 pm2 -v       # List pm2 version known working version is 4.5
 pm2 startup  # This sets computer to start / restart with doorboto process 
 npm install  # install node module dependencies listed in package.json
+npm run build
 
 # I think the folowing is needed for hardware serial but it might be something to try for usb serial
 # raspi-config -> Interfacing Options -> Serial -> #1 No #2 Yes

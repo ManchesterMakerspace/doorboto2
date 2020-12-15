@@ -1,10 +1,10 @@
 // all_the_test.js Copyright 2020 Manchester Makerspace MIT License
-const { runCacheTest } = require('../storage/on_site_cache_test.js');
-const {
+import { runCacheTest } from '../storage/on_site_cache_test';
+import {
   noValidDbTest,
   itUnderstandsBadStanding,
   itUnderstandsGoodStanding,
-} = require('../doorboto_test.js');
+} from '../doorboto_test';
 
 const runThemAll = async () => {
   try {
@@ -35,7 +35,4 @@ if (!module.parent) {
   runThemAll();
 }
 
-module.exports = {
-  runThemAll,
-  runOne,
-};
+export { runThemAll, runOne };

@@ -1,8 +1,8 @@
 // slack.mjs Copyright 2020 Manchester Makerspace Licence MIT
-const { request } = require('https');
+import { request } from 'https';
 const DEFAULT_WEBHOOK = process.env.DOORBOTO_WEBHOOK || '';
 
-const slackSend = (msg, path = DEFAULT_WEBHOOK) => {
+const slackSend = (msg: string, path: string = DEFAULT_WEBHOOK) => {
   return new Promise((resolve) => {
     if (!path) {
       console.log(msg);
@@ -26,11 +26,14 @@ const slackSend = (msg, path = DEFAULT_WEBHOOK) => {
   });
 };
 
-const adminAttention = async (msg, member = 'doorboto admin') => {
+const adminAttention = async (
+  msg: string,
+  member: string = 'doorboto admin'
+) => {
   const atChannel = '<!channel> ';
   const msgBlock = '```' + msg + '```';
   const adminMsg = `${atChannel}${msgBlock} Maybe ${member} needs to be reached out to?`;
   await slackSend(adminMsg, process.env.MR_WEBHOOK);
 };
 
-module.exports = { slackSend, adminAttention };
+export { slackSend, adminAttention };

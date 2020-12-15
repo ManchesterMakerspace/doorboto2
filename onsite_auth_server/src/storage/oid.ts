@@ -1,7 +1,7 @@
 // oid Copyright 2020 Paul Beaudet MIT License
 
 // similar logic to new mongo.ObjectID() except this just returns a string
-const oid = () => {
+const oid = (): string => {
   const increment = Math.floor(Math.random() * 16777216).toString(16);
   const pid = Math.floor(Math.random() * 65536).toString(16);
   const machine = Math.floor(Math.random() * 16777216).toString(16);
@@ -18,4 +18,4 @@ const oid = () => {
   );
 };
 
-module.exports = oid;
+export = oid;

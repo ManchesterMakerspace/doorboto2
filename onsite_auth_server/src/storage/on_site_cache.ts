@@ -1,8 +1,10 @@
 // on_site_cache.mjs Copyright 2020 Manchester Makerspace MIT Licence
-// local cache logic for power, database, or network failure events
-const storage = require('node-persist');
 
-const cacheSetup = async (dir) => {
+// local cache logic for power, database, or network failure events
+import storage, { InitOptions } from 'node-persist';
+import { fullCardData } from '../interface';
+
+const cacheSetup = async (dir: string): Promise<InitOptions | undefined> => {
   try {
     return await storage.init({ dir });
   } catch (error) {
@@ -11,7 +13,12 @@ const cacheSetup = async (dir) => {
 };
 
 // Takes a card object and sets it to local storage
-const updateCard = async ({ holder, expiry, validity, uid }) => {
+const updateCard = async ({
+  holder,
+  expiry,
+  validity,
+  uid,
+}: fullCardData): Promise<void> => {
   expiry = Number(expiry);
   try {
     await storage.setItem(uid, {
@@ -25,7 +32,7 @@ const updateCard = async ({ holder, expiry, validity, uid }) => {
 };
 
 // returns a matching card if it exist
-const checkForCard = async (uid) => {
+const checkForCard = async (uid: string): Promise<undefined | fullCardData> => {
   try {
     const cards = await storage.data();
     for (let info of cards) {
@@ -37,14 +44,9 @@ const checkForCard = async (uid) => {
         };
       }
     }
-    return null;
   } catch (error) {
     console.log(`checkForCard => ${error}`);
   }
 };
 
-module.exports = {
-  cacheSetup,
-  updateCard,
-  checkForCard,
-};
+export { cacheSetup, updateCard, checkForCard };

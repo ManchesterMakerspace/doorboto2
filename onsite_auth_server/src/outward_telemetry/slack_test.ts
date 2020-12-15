@@ -1,6 +1,6 @@
-// slack_test.js Copyright 2020 Manchester Makerspace MIT Licence
+// slack_test Copyright 2020 Manchester Makerspace MIT Licence
 
-const { slackSend, adminAttention } = require('./slack.js');
+import { slackSend, adminAttention } from './slack';
 
 const itCanSendAdminMsg = async () => {
   await adminAttention(
@@ -13,7 +13,4 @@ const itCanSendMsg = async () => {
   await slackSend('Yo this is a test message');
 };
 
-module.exports = {
-  itCanSendAdminMsg,
-  itCanSendMsg,
-};
+export { itCanSendAdminMsg, itCanSendMsg };

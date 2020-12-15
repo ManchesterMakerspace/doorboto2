@@ -1,8 +1,9 @@
-const { cacheSetup, updateCard, checkForCard } = require('./on_site_cache.js');
-const fs = require('fs/promises');
-const oid = require('./oid.js');
+import { cacheSetup, updateCard, checkForCard } from './on_site_cache';
+import fs from 'fs/promises';
+import oid from './oid.js';
+import { fullCardData } from '../interface';
 
-const randomMockCard = () => {
+const randomMockCard = (): fullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -11,7 +12,7 @@ const randomMockCard = () => {
   };
 };
 
-const acceptedCard = () => {
+const acceptedCard = (): fullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -20,7 +21,7 @@ const acceptedCard = () => {
   };
 };
 
-const rejectedCard = () => {
+const rejectedCard = (): fullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -29,7 +30,7 @@ const rejectedCard = () => {
   };
 };
 
-const createCardArray = (total) => {
+const createCardArray = (total: number): Array<fullCardData> => {
   const cards = [];
   for (let i = 0; i < total; i++) {
     cards.push(randomMockCard());
@@ -37,7 +38,7 @@ const createCardArray = (total) => {
   return cards;
 };
 
-const createCards = async (cards) => {
+const createCards = async (cards: Array<fullCardData>) => {
   try {
     for (let i = 0; i < cards.length; i++) {
       await updateCard(cards[i]);
@@ -89,7 +90,7 @@ const runCacheTest = async () => {
 
 // runCacheTest(createCardArray(1));
 
-module.exports = {
+export {
   createCardArray,
   createCards,
   runCacheTest,

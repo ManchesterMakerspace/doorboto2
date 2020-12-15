@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'doorboto',
-      script: 'doorboto.js',
+      script: 'build/doorboto.js',
       log_date_format: 'YYYY-MM-DD HH:mm Z',
       env: {
         MONGODB_URI: process.env.MONGODB_URI,

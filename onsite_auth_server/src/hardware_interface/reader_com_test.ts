@@ -1,6 +1,6 @@
 // reader_com_test.js Copyright 2020 Manchester Makerspace MIT License
 
-const { serialInit } = require('./reader_com.js');
+import { serialInit } from './reader_com.js';
 
 const canItGrantAccess = () => {
   serialInit((data, giveAccess) => {
@@ -16,7 +16,4 @@ const canItDenyAccess = () => {
   });
 };
 
-module.exports = {
-  canItGrantAccess,
-  canItDenyAccess,
-};
+export { canItGrantAccess, canItDenyAccess };

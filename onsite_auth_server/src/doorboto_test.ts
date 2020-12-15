@@ -1,15 +1,16 @@
 // doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
-const { authorize, cronUpdate, checkStanding } = require('./doorboto.js');
-const {
+import { authorize, cronUpdate, checkStanding } from './doorboto';
+import {
   createCardArray,
   createCards,
   rejectedCard,
   acceptedCard,
-} = require('./storage/on_site_cache_test.js');
-const { cacheSetup, updateCard } = require('./storage/on_site_cache.js');
-const fs = require('fs/promises');
-const { connectDB, insertDoc } = require('./storage/mongo.js');
-const oid = require('./storage/oid.js');
+} from './storage/on_site_cache_test';
+import { cacheSetup, updateCard } from './storage/on_site_cache';
+import fs from 'fs/promises';
+import { connectDB, insertDoc } from './storage/mongo';
+import oid from './storage/oid';
+import { standingI } from './interface';
 
 const TEST_PATH = `${__dirname}/test_storage/`;
 const REJECTION = 'rejections';
@@ -19,7 +20,7 @@ const COLLECTIONS = [CARDS, CHECKIN, REJECTION];
 
 // Members should be able to authorize solely on cache
 // Unit test to run without database env vars
-const noValidDbTest = async () => {
+const noValidDbTest = async (): Promise<void> => {
   console.log(`running no valid db test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -39,15 +40,15 @@ const noValidDbTest = async () => {
   }
 };
 
-const itUnderstandsGoodStanding = () => {
+const itUnderstandsGoodStanding = (): void => {
   console.log(`Running is good standing test`);
   const cardData = acceptedCard();
   const standing = checkStanding(cardData);
   try {
-    const { authorized, cardData, msg } = standing;
+    const { authorized, cardData, msg }: standingI = standing;
     if (authorized) {
       console.log(
-        `correctly assessed standing "${msg}" for ${cardData.holder}`
+        `correctly assessed standing "${msg}" for ${cardData?.holder}`
       );
     } else {
       throw new Error('data should be in good standing but assessed as not');
@@ -57,17 +58,17 @@ const itUnderstandsGoodStanding = () => {
   }
 };
 
-const itUnderstandsBadStanding = () => {
+const itUnderstandsBadStanding = (): void => {
   console.log(`running is bad standing test`);
   const cardData = rejectedCard();
   const standing = checkStanding(cardData);
   try {
-    const { authorized, cardData, msg } = standing;
+    const { authorized, cardData, msg }: standingI = standing;
     if (authorized) {
       throw new Error('data should be in bad standing but assessed as good');
     } else {
       console.log(
-        `correctly assessed standing "${msg}" for ${cardData.holder}`
+        `correctly assessed standing "${msg}" for ${cardData?.holder}`
       );
     }
   } catch (error) {
@@ -76,7 +77,7 @@ const itUnderstandsBadStanding = () => {
 };
 
 // Integration test to run with Mongo
-const recordsRejection = async () => {
+const recordsRejection = async (): Promise<void> => {
   console.log(`running records rejection test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -101,7 +102,7 @@ const recordsRejection = async () => {
 };
 
 // integration test with backup of members collection
-const canUpdateCacheOfMembers = async () => {
+const canUpdateCacheOfMembers = async (): Promise<void> => {
   console.log(`It can update a cache of members`);
   try {
     await cacheSetup(TEST_PATH);
@@ -117,10 +118,10 @@ const canUpdateCacheOfMembers = async () => {
   }
 };
 
-// integration test to maintain a key but subtle expected behaviour
+// integration test to maintain a key but subtle expected behavior
 // A database request should not block first attempt to authorize a key against cache
 // if it does this causes significant lag in the doors reaction to authorized key holders
-const itCanOpenDoorQuickly = async () => {
+const itCanOpenDoorQuickly = async (): Promise<void> => {
   console.log(`It can quickly open the door, USE REMOTE DB LIKE PROD`);
   await cacheSetup(TEST_PATH);
   const card = acceptedCard();
@@ -141,7 +142,7 @@ const itCanOpenDoorQuickly = async () => {
 };
 
 // integration test to see if database is double checked if cache is out of data
-const canAuthRecentlyUpdated = async () => {
+const canAuthRecentlyUpdated = async (): Promise<void> => {
   console.log(`running can auth recent update test in ${TEST_PATH}`);
   try {
     await cacheSetup(TEST_PATH);
@@ -187,9 +188,9 @@ const canAuthRecentlyUpdated = async () => {
 };
 
 // fresh db start for integration test
-const cleanUpDb = async () => {
+const cleanUpDb = async (): Promise<void> => {
   const { db, client } = await connectDB();
-  const promises = [];
+  const promises: Array<Promise<void>> = [];
   COLLECTIONS.forEach((collection) => {
     promises.push(db.collection(collection).drop());
   });
@@ -205,7 +206,7 @@ const cleanUpDb = async () => {
   await client.close();
 };
 
-module.exports = {
+export {
   noValidDbTest,
   canUpdateCacheOfMembers,
   recordsRejection,

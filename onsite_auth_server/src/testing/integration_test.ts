@@ -1,21 +1,21 @@
-// integration_test.js Copyright 2020 Manchester Makerspace MIT License
+// integration_test Copyright 2020 Manchester Makerspace MIT License
 // Test that require the reader, a slack credential, or db setup and access
 
-const {
+import {
   recordsRejection,
   canUpdateCacheOfMembers,
   itCanOpenDoorQuickly,
   canAuthRecentlyUpdated,
   cleanUpDb,
-} = require('../doorboto_test.js');
-const {
+} from '../doorboto_test';
+import {
   canItDenyAccess,
   canItGrantAccess,
-} = require('../hardware_interface/reader_com_test.js');
-const {
+} from '../hardware_interface/reader_com_test';
+import {
   itCanSendAdminMsg,
   itCanSendMsg,
-} = require('../outward_telemetry/slack_test.js');
+} from '../outward_telemetry/slack_test';
 
 const slackTest = async () => {
   try {
@@ -68,10 +68,4 @@ if (!module.parent) {
   // runAll();
 }
 
-module.exports = {
-  readerTest,
-  mongoTest,
-  slackTest,
-  runOne,
-  runAll,
-};
+export { readerTest, mongoTest, slackTest, runOne, runAll };
