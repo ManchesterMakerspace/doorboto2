@@ -1,30 +1,30 @@
-// integration_test.js Copyright 2020 Manchester Makerspace MIT License
+// integration_test Copyright 2020 Manchester Makerspace MIT License
 // Test that require the reader, a slack credential, or db setup and access
 
-const {
+import {
   recordsRejection,
   canUpdateCacheOfMembers,
   itCanOpenDoorQuickly,
   canAuthRecentlyUpdated,
   cleanUpDb,
-} = require('../doorboto_test.js');
-const { 
+} from '../doorboto_test';
+import {
   canItDenyAccess,
   canItGrantAccess,
-} = require('../hardware_interface/reader_com_test.js');
-const {
+} from '../hardware_interface/reader_com_test';
+import {
   itCanSendAdminMsg,
   itCanSendMsg,
-} = require('../outward_telemetry/slack_test.js');
+} from '../outward_telemetry/slack_test';
 
 const slackTest = async () => {
   try {
     await itCanSendMsg();
     await itCanSendAdminMsg();
-  } catch (error){
+  } catch (error) {
     console.log(`slackTest => ${error}`);
   }
-}
+};
 
 const mongoTest = async () => {
   try {
@@ -36,42 +36,36 @@ const mongoTest = async () => {
     await cleanUpDb();
     await canAuthRecentlyUpdated();
     await cleanUpDb();
-  } catch (error){
+  } catch (error) {
     console.log(`mongoTest => ${error}`);
   }
-}
+};
 
 const readerTest = () => {
   try {
     canItDenyAccess();
     canItGrantAccess();
-  } catch (error){
+  } catch (error) {
     console.log(`readerTest => ${error}`);
   }
-}
+};
 
-const runAll = async() => {
+const runAll = async () => {
   const dbPromise = mongoTest();
   const slackPromise = slackTest();
   // readerTest();
   await slackPromise;
   await dbPromise;
   process.exit(0);
-}
+};
 
 const runOne = async () => {
   slackTest();
-}
+};
 
-if(!module.parent){
+if (!module.parent) {
   runOne();
   // runAll();
 }
 
-module.exports = {
-  readerTest,
-  mongoTest,
-  slackTest,
-  runOne,
-  runAll,
-}
+export { readerTest, mongoTest, slackTest, runOne, runAll };

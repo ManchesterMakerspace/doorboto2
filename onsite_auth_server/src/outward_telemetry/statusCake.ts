@@ -1,12 +1,12 @@
-const { request } = require('https');
-const DEFAULT_POST = process.env.STATUS_CAKE_KEY || ''
+// statusCake Copyright 2020 Manchester Makerspace MIT License
+import { request } from 'https';
+const DEFAULT_POST = process.env.STATUS_CAKE_KEY || '';
 
 // non-functional: Putting this in here to remind us to set up a heartbeat
 
-
-const pingStatusCake = (apiInfo = DEFAULT_POST) => {
+const pingStatusCake = (apiInfo: string = DEFAULT_POST) => {
   return new Promise((resolve) => {
-    if(!apiInfo){
+    if (!apiInfo) {
       return;
     }
     const postData = apiInfo;
@@ -27,6 +27,4 @@ const pingStatusCake = (apiInfo = DEFAULT_POST) => {
   });
 };
 
-module.exports = {
-  pingStatusCake,
-}
+export { pingStatusCake };

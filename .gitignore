@@ -11,3 +11,4 @@ test_storage
 prod.sh
 members
 env_integration.sh
+build

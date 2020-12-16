@@ -1,8 +1,10 @@
-const { cacheSetup, updateCard, checkForCard } = require( './on_site_cache.js');
-const fs = require( 'fs/promises');
-const oid = require( './oid.js');
+// on_site_cache_test Copyright 2020 Manchester Makerspace Licence MIT
+import { cacheSetup, updateCard, checkForCard } from './on_site_cache';
+import fs from 'fs/promises';
+import oid from './oid.js';
+import { CardData } from '../interface';
 
-const randomMockCard = () => {
+const randomMockCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -11,33 +13,33 @@ const randomMockCard = () => {
   };
 };
 
-const acceptedCard = () => {
+const acceptedCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
     expiry: new Date().getTime(),
     validity: 'activeMember',
-  }
-}
+  };
+};
 
-const rejectedCard = () => {
+const rejectedCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
     expiry: new Date().getTime(),
     validity: 'lostCard',
-  }
-}
+  };
+};
 
-const createCardArray = total => {
+const createCardArray = (total: number): Array<CardData> => {
   const cards = [];
   for (let i = 0; i < total; i++) {
     cards.push(randomMockCard());
   }
   return cards;
-}
+};
 
-const createCards = async cards => {
+const createCards = async (cards: Array<CardData>) => {
   try {
     for (let i = 0; i < cards.length; i++) {
       await updateCard(cards[i]);
@@ -45,7 +47,7 @@ const createCards = async cards => {
   } catch (error) {
     console.log(`create issue => ${error}`);
   }
-}
+};
 
 // load some cards see if they can be read
 // clean up the mess afterwards
@@ -89,10 +91,10 @@ const runCacheTest = async () => {
 
 // runCacheTest(createCardArray(1));
 
-module.exports = {
+export {
   createCardArray,
   createCards,
   runCacheTest,
   acceptedCard,
   rejectedCard,
-}
+};
