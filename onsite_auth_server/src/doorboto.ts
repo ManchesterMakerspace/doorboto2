@@ -3,7 +3,7 @@ import { connectDB, getCardFromDb } from './storage/mongo';
 import { cacheSetup, updateCard, checkForCard } from './storage/on_site_cache';
 import { serialInit } from './hardware_interface/reader_com';
 import { slackSend, adminAttention } from './outward_telemetry/slack';
-import { CardData, Standing, GiveAccessCallback } from './interface';
+import { CardData, GiveAccessCallback, Standing } from './interface';
 
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed

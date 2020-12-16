@@ -1,6 +1,6 @@
 // mongo_test Copyright 2020 Manchester Makerspace MIT License
 // integration test for database interactions
-import { FullCardData } from '../interface';
+import { CardData } from '../interface';
 import { connectDB, makeRecordOfScanFunc } from './mongo';
 import {
   createCardArray,
@@ -23,7 +23,7 @@ const canMakeRejection = async () => {
   const { db, client } = await connectDB();
   const scanFunc = makeRecordOfScanFunc({ db, client });
   // The following should insert a random doc into rejections or checkin collection
-  const cardData: FullCardData = rejectedCard();
+  const cardData: CardData = rejectedCard();
   await scanFunc({
     authorized: cardData.validity === 'activeMember' ? false : true,
     cardData,
@@ -34,7 +34,7 @@ const canMakeCheckin = async () => {
   const { db, client } = await connectDB();
   const scanFunc = makeRecordOfScanFunc({ db, client });
   // The following should insert a random doc into rejections or checkin collection
-  const cardData: FullCardData = acceptedCard();
+  const cardData: CardData = acceptedCard();
   await scanFunc({
     authorized: cardData.validity === 'activeMember' ? false : true,
     cardData,

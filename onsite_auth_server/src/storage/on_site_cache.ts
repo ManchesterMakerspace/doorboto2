@@ -2,7 +2,7 @@
 
 // local cache logic for power, database, or network failure events
 import storage, { InitOptions } from 'node-persist';
-import { FullCardData } from '../interface';
+import { CardData } from '../interface';
 
 const cacheSetup = async (dir: string): Promise<InitOptions | undefined> => {
   try {
@@ -18,7 +18,7 @@ const updateCard = async ({
   expiry,
   validity,
   uid,
-}: FullCardData): Promise<void> => {
+}: CardData): Promise<void> => {
   expiry = Number(expiry);
   try {
     await storage.setItem(uid, {
@@ -32,7 +32,7 @@ const updateCard = async ({
 };
 
 // returns a matching card if it exist
-const checkForCard = async (uid: string): Promise<undefined | FullCardData> => {
+const checkForCard = async (uid: string): Promise<undefined | CardData> => {
   try {
     const cards = await storage.data();
     for (let info of cards) {

@@ -2,9 +2,9 @@
 import { cacheSetup, updateCard, checkForCard } from './on_site_cache';
 import fs from 'fs/promises';
 import oid from './oid.js';
-import { FullCardData } from '../interface';
+import { CardData } from '../interface';
 
-const randomMockCard = (): FullCardData => {
+const randomMockCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -13,7 +13,7 @@ const randomMockCard = (): FullCardData => {
   };
 };
 
-const acceptedCard = (): FullCardData => {
+const acceptedCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -22,7 +22,7 @@ const acceptedCard = (): FullCardData => {
   };
 };
 
-const rejectedCard = (): FullCardData => {
+const rejectedCard = (): CardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -31,7 +31,7 @@ const rejectedCard = (): FullCardData => {
   };
 };
 
-const createCardArray = (total: number): Array<FullCardData> => {
+const createCardArray = (total: number): Array<CardData> => {
   const cards = [];
   for (let i = 0; i < total; i++) {
     cards.push(randomMockCard());
@@ -39,7 +39,7 @@ const createCardArray = (total: number): Array<FullCardData> => {
   return cards;
 };
 
-const createCards = async (cards: Array<FullCardData>) => {
+const createCards = async (cards: Array<CardData>) => {
   try {
     for (let i = 0; i < cards.length; i++) {
       await updateCard(cards[i]);

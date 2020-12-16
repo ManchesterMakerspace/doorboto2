@@ -29,7 +29,7 @@ const connectDB = async (): Promise<MongoObject> => {
   }
 };
 
-const insertDoc = (doc: any): any => {
+const insertDoc = <T extends object>(doc: T): object => {
   return {
     ...doc,
     _id: new ObjectID(),

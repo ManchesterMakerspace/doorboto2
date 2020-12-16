@@ -5,10 +5,6 @@ interface CardData {
   holder: string | null;
   validity: string;
   expiry: number | null;
-  uid?: string;
-}
-
-interface FullCardData extends CardData {
   uid: string;
 }
 
@@ -41,13 +37,12 @@ interface MongoObject {
 }
 
 interface GetCardFromDbReturn {
-  dbCardData: FullCardData | null;
+  dbCardData: CardData | null;
   recordScan: (recordCallbackParams: RecordCallbackParams) => void;
 }
 
 export {
   CardData,
-  FullCardData,
   Standing,
   GiveAccessCallback,
   OnDataCallback,
