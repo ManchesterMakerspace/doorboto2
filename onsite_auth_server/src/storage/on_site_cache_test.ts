@@ -1,9 +1,10 @@
+// on_site_cache_test Copyright 2020 Manchester Makerspace Licence MIT
 import { cacheSetup, updateCard, checkForCard } from './on_site_cache';
 import fs from 'fs/promises';
 import oid from './oid.js';
-import { fullCardData } from '../interface';
+import { FullCardData } from '../interface';
 
-const randomMockCard = (): fullCardData => {
+const randomMockCard = (): FullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -12,7 +13,7 @@ const randomMockCard = (): fullCardData => {
   };
 };
 
-const acceptedCard = (): fullCardData => {
+const acceptedCard = (): FullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -21,7 +22,7 @@ const acceptedCard = (): fullCardData => {
   };
 };
 
-const rejectedCard = (): fullCardData => {
+const rejectedCard = (): FullCardData => {
   return {
     uid: oid(),
     holder: Math.round(Math.random()) ? 'Alice' : 'Bob',
@@ -30,7 +31,7 @@ const rejectedCard = (): fullCardData => {
   };
 };
 
-const createCardArray = (total: number): Array<fullCardData> => {
+const createCardArray = (total: number): Array<FullCardData> => {
   const cards = [];
   for (let i = 0; i < total; i++) {
     cards.push(randomMockCard());
@@ -38,7 +39,7 @@ const createCardArray = (total: number): Array<fullCardData> => {
   return cards;
 };
 
-const createCards = async (cards: Array<fullCardData>) => {
+const createCards = async (cards: Array<FullCardData>) => {
   try {
     for (let i = 0; i < cards.length; i++) {
       await updateCard(cards[i]);

@@ -1,13 +1,13 @@
 // reader_com Copyright 2020 Manchester Makerspace MIT Licence
 import SerialPort from 'serialport';
 const Readline = require('@serialport/parser-readline');
-import { onDataCallback } from '../interface';
+import { OnDataCallback } from '../interface';
 // on yun DO NOT NPM INSTALL -> opkg install node-serialport,
 // use global lib instead, actually new library probably no good
 const RETRY_DELAY = 5000;
 const ARDUINO_PORT = process.env.ARDUINO_PORT ?? null;
 
-const reconnect = (onData: onDataCallback) => {
+const reconnect = (onData: OnDataCallback) => {
   return (error: string) => {
     // given something went wrong try to re-establish connection
     if (error) {
@@ -19,7 +19,7 @@ const reconnect = (onData: onDataCallback) => {
   };
 };
 
-const serialInit = (onData: onDataCallback) => {
+const serialInit = (onData: OnDataCallback) => {
   if (ARDUINO_PORT === null) {
     console.log(`Port failed to be specified`);
     return;

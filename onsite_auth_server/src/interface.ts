@@ -1,58 +1,58 @@
 // interface.ts Copyright 2020 Manchester Makerspace MIT License
 import { Db, MongoClient } from 'mongodb';
 
-interface cardDataI {
+interface CardData {
   holder: string | null;
   validity: string;
   expiry: number | null;
   uid?: string;
 }
 
-interface fullCardData extends cardDataI {
+interface FullCardData extends CardData {
   uid: string;
 }
 
-interface standingI {
-  cardData: cardDataI;
+interface Standing {
+  cardData: CardData;
   authorized: boolean;
   msg: string;
 }
 
-interface giveAccessCallback {
+interface GiveAccessCallback {
   (authorized: boolean): void;
 }
 
-interface onDataCallback {
-  (data: string, giveAccessCallback: giveAccessCallback): void;
+interface OnDataCallback {
+  (data: string, giveAccessCallback: GiveAccessCallback): void;
 }
 
-interface recordCallbackParams {
+interface RecordCallbackParams {
   authorized: boolean;
-  cardData: cardDataI;
+  cardData: CardData;
 }
 
-interface makeRecordFuncReturn {
-  (recordCallbackParams: recordCallbackParams): Promise<void>;
+interface MakeRecordFuncReturn {
+  (recordCallbackParams: RecordCallbackParams): Promise<void>;
 }
 
-interface DBI {
+interface MongoObject {
   db: Db;
   client: MongoClient;
 }
 
-interface getCardFromDbReturn {
-  dbCardData: fullCardData | null;
-  recordScan: (recordCallbackParams: recordCallbackParams) => void;
+interface GetCardFromDbReturn {
+  dbCardData: FullCardData | null;
+  recordScan: (recordCallbackParams: RecordCallbackParams) => void;
 }
 
 export {
-  cardDataI,
-  fullCardData,
-  standingI,
-  giveAccessCallback,
-  onDataCallback,
-  recordCallbackParams,
-  DBI,
-  getCardFromDbReturn,
-  makeRecordFuncReturn,
+  CardData,
+  FullCardData,
+  Standing,
+  GiveAccessCallback,
+  OnDataCallback,
+  RecordCallbackParams,
+  MongoObject,
+  GetCardFromDbReturn,
+  MakeRecordFuncReturn,
 };

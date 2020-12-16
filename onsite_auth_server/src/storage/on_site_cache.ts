@@ -1,8 +1,8 @@
-// on_site_cache.mjs Copyright 2020 Manchester Makerspace MIT Licence
+// on_site_cache Copyright 2020 Manchester Makerspace MIT Licence
 
 // local cache logic for power, database, or network failure events
 import storage, { InitOptions } from 'node-persist';
-import { fullCardData } from '../interface';
+import { FullCardData } from '../interface';
 
 const cacheSetup = async (dir: string): Promise<InitOptions | undefined> => {
   try {
@@ -18,7 +18,7 @@ const updateCard = async ({
   expiry,
   validity,
   uid,
-}: fullCardData): Promise<void> => {
+}: FullCardData): Promise<void> => {
   expiry = Number(expiry);
   try {
     await storage.setItem(uid, {
@@ -32,7 +32,7 @@ const updateCard = async ({
 };
 
 // returns a matching card if it exist
-const checkForCard = async (uid: string): Promise<undefined | fullCardData> => {
+const checkForCard = async (uid: string): Promise<undefined | FullCardData> => {
   try {
     const cards = await storage.data();
     for (let info of cards) {

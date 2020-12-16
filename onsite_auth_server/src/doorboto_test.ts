@@ -1,4 +1,4 @@
-// doorboto_test.mjs Copyright 2020 Manchester Makerspace MIT Licence
+// doorboto_test Copyright 2020 Manchester Makerspace MIT Licence
 import { authorize, cronUpdate, checkStanding } from './doorboto';
 import {
   createCardArray,
@@ -10,7 +10,7 @@ import { cacheSetup, updateCard } from './storage/on_site_cache';
 import fs from 'fs/promises';
 import { connectDB, insertDoc } from './storage/mongo';
 import oid from './storage/oid';
-import { standingI } from './interface';
+import { Standing } from './interface';
 
 const TEST_PATH = `${__dirname}/test_storage/`;
 const REJECTION = 'rejections';
@@ -45,7 +45,7 @@ const itUnderstandsGoodStanding = (): void => {
   const cardData = acceptedCard();
   const standing = checkStanding(cardData);
   try {
-    const { authorized, cardData, msg }: standingI = standing;
+    const { authorized, cardData, msg }: Standing = standing;
     if (authorized) {
       console.log(
         `correctly assessed standing "${msg}" for ${cardData?.holder}`
@@ -63,7 +63,7 @@ const itUnderstandsBadStanding = (): void => {
   const cardData = rejectedCard();
   const standing = checkStanding(cardData);
   try {
-    const { authorized, cardData, msg }: standingI = standing;
+    const { authorized, cardData, msg }: Standing = standing;
     if (authorized) {
       throw new Error('data should be in bad standing but assessed as good');
     } else {

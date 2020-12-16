@@ -1,19 +1,19 @@
-// doorboto.mjs ~ Copyright 2020 Manchester Makerspace ~ License MIT
+// doorboto ~ Copyright 2020 Manchester Makerspace ~ License MIT
 import { connectDB, getCardFromDb } from './storage/mongo';
 import { cacheSetup, updateCard, checkForCard } from './storage/on_site_cache';
 import { serialInit } from './hardware_interface/reader_com';
 import { slackSend, adminAttention } from './outward_telemetry/slack';
-import { cardDataI, standingI, giveAccessCallback } from './interface';
+import { CardData, Standing, GiveAccessCallback } from './interface';
 
 const HOUR = 3600000; // milliseconds in an hour
 const LENIENCY = HOUR * 72; // give 3 days for a card to be renewed
 
 // Looks at card data and returns an object representing member standing
-const checkStanding = (cardData: cardDataI): standingI => {
+const checkStanding = (cardData: CardData): Standing => {
   const { validity, holder, expiry } = cardData;
   const whom = holder ? `${holder}'s ` : '';
   const expireTime: number = expiry ? expiry : 0;
-  const standing: standingI = {
+  const standing: Standing = {
     authorized: false,
     msg: `${whom}${validity} card was scanned`,
     cardData: { ...cardData },
@@ -30,9 +30,9 @@ const checkStanding = (cardData: cardDataI): standingI => {
   return standing;
 };
 
-const authorize = async (uid: string, giveAccess: giveAccessCallback) => {
+const authorize = async (uid: string, giveAccess: GiveAccessCallback) => {
   const cacheCardData = await checkForCard(uid);
-  let standing: standingI = {
+  let standing: Standing = {
     authorized: false,
     msg: '',
     cardData: {
